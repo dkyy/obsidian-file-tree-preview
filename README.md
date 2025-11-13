@@ -57,9 +57,10 @@ Access via Settings → Community Plugins → File Tree Preview:
 
 ### Build Steps
 
-1. Navigate to the plugin directory:
+1. Clone the repository:
    ```bash
-   cd /Users/david/Library/Mobile\ Documents/iCloud~md~obsidian/Documents/Art/.obsidian/plugins/file-tree-preview
+   git clone https://github.com/dkyy/obsidian-file-tree-preview.git
+   cd obsidian-file-tree-preview
    ```
 
 2. Install dependencies:
@@ -79,10 +80,19 @@ Access via Settings → Community Plugins → File Tree Preview:
 
 ## Installation
 
-1. The plugin is already in your Obsidian plugins folder
-2. After building, restart Obsidian or reload the app
-3. Go to Settings → Community Plugins
-4. Enable "File Tree Preview"
+### From Obsidian Community Plugins (Recommended)
+
+Once approved, you can install directly from Obsidian:
+1. Open Settings → Community Plugins
+2. Click "Browse" and search for "File Tree Preview"
+3. Click "Install" and then "Enable"
+
+### Manual Installation
+
+1. Download the latest release from [GitHub Releases](https://github.com/dkyy/obsidian-file-tree-preview/releases)
+2. Extract the files to your vault's plugins folder: `<vault>/.obsidian/plugins/file-tree-preview/`
+3. Reload Obsidian
+4. Go to Settings → Community Plugins and enable "File Tree Preview"
 
 ## Usage
 
