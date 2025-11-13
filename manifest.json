@@ -1,0 +1,10 @@
+{
+    "id": "file-tree-preview",
+    "name": "File Tree Preview",
+    "version": "1.0.0",
+    "minAppVersion": "0.15.0",
+    "description": "Navigate folders in a tree structure with preview cards showing file content snippets, following the macOS column-based pattern",
+    "author": "David Young",
+    "authorUrl": "https://github.com/dkyy",
+    "isDesktopOnly": false
+}

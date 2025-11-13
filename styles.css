@@ -1,0 +1,477 @@
+/* CSS Variables */
+:root {
+    /* Font Sizes */
+    --ftp-folder-font-size: 14px;
+    --ftp-folder-icon-size: 14px;
+    --ftp-preview-filename-font-size: 14px;
+    --ftp-preview-text-font-size: 14px;
+    --ftp-header-font-size: 14px;
+    --ftp-button-font-size: 16px;
+    --ftp-placeholder-font-size: 12px;
+
+    /* Spacing */
+    --ftp-preview-card-padding-vertical: 12px;
+    --ftp-preview-card-padding-horizontal: 12px;
+    --ftp-folder-indent: 20px;
+    --ftp-folder-item-gap: 4px;
+    --ftp-header-button-gap: 2px;
+    --ftp-preview-card-border-width: 2px;
+    --ftp-preview-card-border-radius: 6px;
+
+    /* Background Colors - leave unset to inherit from theme */
+    --ftp-tree-column-background: unset;
+    --ftp-preview-column-background: unset;
+    --ftp-selected-folder-background: var(--background-modifier-border);
+
+    /* Text Colors - leave unset to inherit from theme */
+    --ftp-folder-text-color: unset;
+    --ftp-selected-folder-text-color: unset;
+    --ftp-preview-card-border-color: var(--background-modifier-border);
+
+    /* Typography */
+    --ftp-folder-font-weight: normal;
+    --ftp-selected-folder-font-weight: 500;
+    --ftp-preview-filename-font-weight: bold;
+    --ftp-preview-text-line-height: 1.4;
+    --ftp-folder-line-height: inherit;
+
+    /* Scrollbar */
+    --ftp-scrollbar-width: 6px;
+    --ftp-scrollbar-color: var(--background-modifier-border);
+}
+
+/* Main container */
+.file-tree-preview-container {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.ftp-main-layout {
+    display: flex;
+    height: 100%;
+    width: 100%;
+}
+
+/* File Tree Column (Left) */
+.ftp-tree-column {
+    flex: 0 0 auto;
+    min-width: 150px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px 0 0 0;
+    background-color: var(--ftp-tree-column-background);
+}
+
+/* Resize Handle */
+.ftp-resize-handle {
+    flex: 0 0 4px;
+    cursor: col-resize;
+    background-color: transparent;
+    position: relative;
+}
+
+/* Preview Column (Right) */
+.ftp-preview-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background-color: var(--ftp-preview-column-background, var(--background-secondary));
+    min-width: 0;
+}
+
+.ftp-preview-header {
+    padding: 0 8px 16px 8px;
+    font-size: var(--ftp-header-font-size);
+    font-weight: bold;
+    border-bottom: 1px solid var(--background-modifier-border);
+    background-color: var(--ftp-preview-column-background, var(--background-secondary));
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.ftp-preview-header-left {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ftp-preview-header-right {
+    display: flex;
+    gap: var(--ftp-header-button-gap);
+    flex-shrink: 0;
+}
+
+.ftp-header-button {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: var(--ftp-button-font-size);
+    cursor: pointer;
+    color: var(--text-normal);
+    transition: background-color 0.1s ease;
+}
+
+.ftp-header-button:hover {
+    background-color: var(--background-modifier-hover) !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.ftp-header-button:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+.ftp-header-button:active {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+.ftp-preview-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0 8px 0 8px;
+}
+
+/* Folder items */
+.ftp-folder-item {
+    margin: 2px 0;
+}
+
+.ftp-folder-header {
+    padding: 4px 8px;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: var(--ftp-folder-font-size);
+    font-weight: var(--ftp-folder-font-weight);
+    line-height: var(--ftp-folder-line-height);
+    color: var(--ftp-folder-text-color);
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: var(--ftp-folder-item-gap);
+}
+
+/* Hover effect - only when enabled */
+.ftp-show-hover .ftp-folder-header:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.ftp-folder-header.ftp-selected {
+    background-color: var(--ftp-selected-folder-background);
+    font-weight: var(--ftp-selected-folder-font-weight);
+    color: var(--ftp-selected-folder-text-color);
+}
+
+.ftp-folder-caret {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 12px;
+    height: 12px;
+    transition: transform 0.15s ease;
+    transform: rotate(0deg);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.ftp-folder-caret svg {
+    width: 12px;
+    height: 12px;
+}
+
+.ftp-folder-caret.ftp-collapsed {
+    transform: rotate(-90deg);
+}
+
+/* Hover effect removed */
+/* .ftp-folder-caret:hover {
+    color: var(--text-normal);
+} */
+
+.ftp-folder-caret-spacer {
+    display: inline-block;
+    width: 12px;
+    flex-shrink: 0;
+}
+
+.ftp-folder-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ftp-icon-container {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.ftp-icon-container svg {
+    width: var(--ftp-folder-icon-size);
+    height: var(--ftp-folder-icon-size);
+}
+
+.ftp-folder-content {
+    overflow: hidden;
+    transition: max-height 0.2s ease;
+}
+
+.ftp-folder-content.ftp-collapsed {
+    display: none;
+}
+
+/* Preview panel */
+.ftp-no-selection {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.ftp-preview-item {
+    padding: var(--ftp-preview-card-padding-vertical) var(--ftp-preview-card-padding-horizontal);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    border-bottom: var(--ftp-preview-card-border-width) solid var(--ftp-preview-card-border-color);
+    border-radius: var(--ftp-preview-card-border-radius);
+}
+
+.ftp-preview-item:last-child {
+    border-bottom: none;
+}
+
+/* Hover effect - only when enabled */
+.ftp-show-hover .ftp-preview-item:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+/* Don't show hover on active items */
+.ftp-show-hover .ftp-preview-item-active:hover {
+    background-color: var(--interactive-accent);
+}
+
+.ftp-show-hover .ftp-neutral-highlight .ftp-preview-item-active:hover {
+    background-color: var(--background-modifier-border);
+}
+
+.ftp-preview-item-active {
+    /* Highlight currently open file - accent color by default */
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.ftp-preview-item-active .ftp-preview-filename,
+.ftp-preview-item-active .ftp-preview-filename strong,
+.ftp-preview-item-active .ftp-preview-lines,
+.ftp-preview-item-active .ftp-placeholder-label {
+    color: var(--text-on-accent);
+}
+
+/* Neutral highlight mode */
+.ftp-neutral-highlight .ftp-preview-item-active {
+    background-color: var(--background-modifier-border);
+    color: var(--text-normal);
+}
+
+.ftp-neutral-highlight .ftp-preview-item-active .ftp-preview-filename,
+.ftp-neutral-highlight .ftp-preview-item-active .ftp-preview-filename strong,
+.ftp-neutral-highlight .ftp-preview-item-active .ftp-preview-lines,
+.ftp-neutral-highlight .ftp-preview-item-active .ftp-placeholder-label {
+    color: var(--text-normal);
+}
+
+.ftp-neutral-highlight .ftp-preview-item-active .ftp-preview-lines,
+.ftp-neutral-highlight .ftp-preview-item-active .ftp-placeholder-label {
+    color: var(--text-muted);
+}
+
+.ftp-preview-filename {
+    margin-bottom: 2px;
+    font-size: var(--ftp-preview-filename-font-size);
+    line-height: var(--ftp-preview-text-line-height);
+    height: calc(var(--ftp-preview-text-line-height) * 1em);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: var(--ftp-preview-filename-font-weight);
+}
+
+/* Collapsed previews - hide preview text and thumbnails */
+.ftp-previews-collapsed .ftp-preview-lines,
+.ftp-previews-collapsed .ftp-preview-thumbnail,
+.ftp-previews-collapsed .ftp-preview-placeholder {
+    display: none;
+}
+
+.ftp-previews-collapsed .ftp-preview-filename {
+    margin-bottom: 0;
+}
+
+.ftp-previews-collapsed .ftp-preview-item {
+    padding: 4px var(--ftp-preview-card-padding-horizontal);
+    border-bottom: none;
+}
+
+/* Collapsed previews in compact mode */
+.ftp-compact.ftp-previews-collapsed .ftp-preview-item,
+.ftp-compact .ftp-previews-collapsed .ftp-preview-item {
+    padding: 2px calc(var(--ftp-preview-card-padding-horizontal) * 0.67);
+    border-bottom: none;
+}
+
+.ftp-preview-filename strong {
+    color: var(--text-normal);
+    font-weight: bold;
+}
+
+.ftp-preview-lines {
+    font-size: var(--ftp-preview-text-font-size);
+    line-height: var(--ftp-preview-text-line-height);
+    color: var(--text-muted);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    height: calc(var(--ftp-preview-text-line-height) * 4em);
+}
+
+.ftp-preview-thumbnail {
+    margin-top: 2px;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    height: calc(1.4em * 4); /* Default 4 lines, overridden by JS */
+    overflow: hidden;
+}
+
+.ftp-preview-thumbnail img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.ftp-preview-placeholder {
+    margin-top: 2px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    height: calc(1.4em * 4); /* Default 4 lines, overridden by JS */
+    gap: 8px;
+}
+
+.ftp-placeholder-icon {
+    display: flex;
+    align-items: center;
+    opacity: 0.5;
+}
+
+.ftp-file-icon {
+    width: 48px;
+    height: 48px;
+    color: var(--text-muted);
+}
+
+.ftp-placeholder-label {
+    font-size: var(--ftp-placeholder-font-size);
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Scrollbar styling - consistent thin width */
+.ftp-tree-column,
+.ftp-preview-content {
+    scrollbar-width: thin !important;
+    scrollbar-color: transparent transparent !important;
+}
+
+.ftp-tree-column:hover,
+.ftp-preview-content:hover {
+    scrollbar-color: var(--ftp-scrollbar-color) transparent !important;
+}
+
+/* Compact mode - reduced spacing */
+.ftp-compact .ftp-tree-column {
+    padding: 4px 0 0 0;
+}
+
+.ftp-compact .ftp-folder-item {
+    margin: 0;
+}
+
+.ftp-compact .ftp-folder-header {
+    padding: 2px 8px;
+}
+
+.ftp-compact .ftp-preview-header {
+    padding: 0 8px 8px 8px;
+}
+
+.ftp-compact .ftp-preview-content {
+    padding: 0 8px 0 8px;
+}
+
+.ftp-compact .ftp-preview-item {
+    padding: calc(var(--ftp-preview-card-padding-vertical) * 0.67) calc(var(--ftp-preview-card-padding-horizontal) * 0.67);
+    border-bottom-width: calc(var(--ftp-preview-card-border-width) * 0.5);
+}
+
+.ftp-compact .ftp-preview-filename {
+    margin-bottom: 1px;
+}
+
+.ftp-compact .ftp-preview-thumbnail {
+    margin-top: 1px;
+}
+
+/* Webkit scrollbar styling */
+.ftp-tree-column::-webkit-scrollbar,
+.ftp-preview-content::-webkit-scrollbar {
+    width: var(--ftp-scrollbar-width) !important;
+}
+
+.ftp-tree-column::-webkit-scrollbar-track,
+.ftp-preview-content::-webkit-scrollbar-track {
+    background: transparent !important;
+}
+
+/* Hide scrollbar by default */
+.ftp-tree-column::-webkit-scrollbar-thumb,
+.ftp-preview-content::-webkit-scrollbar-thumb {
+    background: transparent !important;
+    border-radius: 3px !important;
+}
+
+/* Show scrollbar on hover of parent */
+.ftp-tree-column:hover::-webkit-scrollbar-thumb,
+.ftp-preview-content:hover::-webkit-scrollbar-thumb {
+    background: var(--ftp-scrollbar-color) !important;
+}
+
+/* Darker on direct scrollbar hover */
+.ftp-tree-column::-webkit-scrollbar-thumb:hover,
+.ftp-preview-content::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted) !important;
+}
