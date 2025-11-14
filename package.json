@@ -1,6 +1,6 @@
 {
   "name": "file-tree-preview",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "File tree with Ulysses-style preview panel",
   "main": "main.js",
   "scripts": {

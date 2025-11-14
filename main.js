@@ -52,8 +52,8 @@ var FileTreePreviewPlugin = class extends import_obsidian.Plugin {
       this.activateView();
     });
     this.addCommand({
-      id: "open-file-tree-preview",
-      name: "Open File Tree Preview",
+      id: "open",
+      name: "Open",
       callback: () => {
         this.activateView();
       }
@@ -65,8 +65,7 @@ var FileTreePreviewPlugin = class extends import_obsidian.Plugin {
       });
     }
   }
-  async onunload() {
-    this.app.workspace.detachLeavesOfType(VIEW_TYPE_FILE_TREE_PREVIEW);
+  onunload() {
   }
   async loadPluginData() {
     const loadedData = await super.loadData();
@@ -154,25 +153,29 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
     await this.renderFileTree();
     await this.renderPreview();
     this.register(() => {
-      const timeoutId = window.setTimeout(async () => {
-        await this.renderFileTree();
+      const timeoutId = window.setTimeout(() => {
+        this.renderFileTree().catch(console.error);
       }, 1e3);
       return () => window.clearTimeout(timeoutId);
     });
     this.registerEvent(
-      this.app.vault.on("create", async () => await this.renderFileTree())
-    );
-    this.registerEvent(
-      this.app.vault.on("delete", async () => await this.renderFileTree())
-    );
-    this.registerEvent(
-      this.app.vault.on("rename", async () => {
-        await this.renderFileTree();
-        this.renderPreview();
+      this.app.vault.on("create", () => {
+        this.renderFileTree().catch(console.error);
       })
     );
     this.registerEvent(
-      this.app.workspace.on("file-open", async (file) => {
+      this.app.vault.on("delete", () => {
+        this.renderFileTree().catch(console.error);
+      })
+    );
+    this.registerEvent(
+      this.app.vault.on("rename", () => {
+        this.renderFileTree().catch(console.error);
+        this.renderPreview().catch(console.error);
+      })
+    );
+    this.registerEvent(
+      this.app.workspace.on("file-open", (file) => {
         if (file && file.parent) {
           const previousFolder = this.selectedFolder;
           this.activeFile = file;
@@ -180,8 +183,10 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
           if (previousFolder === this.selectedFolder) {
             this.updateActiveHighlight();
           } else {
-            await this.renderFileTree();
-            await this.renderPreview();
+            Promise.all([
+              this.renderFileTree(),
+              this.renderPreview()
+            ]).catch(console.error);
           }
         }
       })
@@ -346,7 +351,7 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
       });
       if (hasSubfolders) {
         const caret = folderHeader.createSpan({ cls: "ftp-folder-caret" });
-        caret.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path></svg>`;
+        (0, import_obsidian.setIcon)(caret, "right-triangle");
         if (isCollapsed) {
           caret.addClass("ftp-collapsed");
         }
@@ -383,13 +388,23 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
               const iconData = iconFolderPlugin.api.getIconByName(iconToRender);
               if (iconData && iconData.svgElement) {
                 const iconContainer = folderNameSpan.createSpan({ cls: "ftp-icon-container" });
-                iconContainer.innerHTML = iconData.svgElement;
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(iconData.svgElement, "image/svg+xml");
+                const svgEl = doc.documentElement;
+                if (svgEl && !svgEl.querySelector("parsererror")) {
+                  iconContainer.appendChild(svgEl);
+                }
                 folderNameSpan.appendText(" " + item.name);
               } else {
                 const fallbackIcon = iconFolderPlugin.api.getIconByName(defaultIcon);
                 if (fallbackIcon && fallbackIcon.svgElement) {
                   const iconContainer = folderNameSpan.createSpan({ cls: "ftp-icon-container" });
-                  iconContainer.innerHTML = fallbackIcon.svgElement;
+                  const parser = new DOMParser();
+                  const doc = parser.parseFromString(fallbackIcon.svgElement, "image/svg+xml");
+                  const svgEl = doc.documentElement;
+                  if (svgEl && !svgEl.querySelector("parsererror")) {
+                    iconContainer.appendChild(svgEl);
+                  }
                   folderNameSpan.appendText(" " + item.name);
                 } else {
                   folderNameSpan.setText(item.name);
@@ -440,8 +455,12 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
       folderHeader.addEventListener("click", async (e) => {
         e.stopPropagation();
         this.selectedFolder = item;
-        await this.renderFileTree();
-        await this.renderPreview();
+        try {
+          await this.renderFileTree();
+          await this.renderPreview();
+        } catch (error) {
+          console.error("Error rendering folder:", error);
+        }
       });
       folderHeader.addEventListener("contextmenu", (e) => {
         e.preventDefault();
@@ -491,7 +510,7 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
           menuItem.setTitle("Delete").setIcon("trash").onClick(() => {
             new DeleteFolderModal(this.app, item.name, async () => {
               try {
-                await this.app.vault.trash(item, true);
+                await this.app.fileManager.trashFile(item);
               } catch (error) {
                 console.error("Failed to delete folder:", error);
                 new import_obsidian.Notice("Failed to delete folder");
@@ -651,15 +670,20 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
     newFileButton.setText("+");
     newFileButton.addEventListener("click", async () => {
       if (this.selectedFolder) {
-        const fileName = "Untitled.md";
-        let filePath = `${this.selectedFolder.path}/${fileName}`;
-        let counter = 1;
-        while (await this.app.vault.adapter.exists(filePath)) {
-          filePath = `${this.selectedFolder.path}/Untitled ${counter}.md`;
-          counter++;
+        try {
+          const fileName = "Untitled.md";
+          let filePath = `${this.selectedFolder.path}/${fileName}`;
+          let counter = 1;
+          while (await this.app.vault.adapter.exists(filePath)) {
+            filePath = `${this.selectedFolder.path}/Untitled ${counter}.md`;
+            counter++;
+          }
+          const file = await this.app.vault.create(filePath, "");
+          await this.app.workspace.getLeaf(false).openFile(file);
+        } catch (error) {
+          console.error("Error creating new file:", error);
+          new import_obsidian.Notice("Failed to create new file");
         }
-        const file = await this.app.vault.create(filePath, "");
-        await this.app.workspace.getLeaf(false).openFile(file);
       }
     });
     const files = this.selectedFolder.children.filter(
@@ -783,8 +807,13 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
     } else if ((fileTypeInfo == null ? void 0 : fileTypeInfo.type) === "placeholder") {
       const placeholderContainer = previewItem.createDiv({ cls: "ftp-preview-placeholder" });
       const iconContainer = placeholderContainer.createDiv({ cls: "ftp-placeholder-icon" });
-      iconContainer.innerHTML = fileTypeInfo.icon;
-      const label = placeholderContainer.createDiv({ cls: "ftp-placeholder-label", text: fileTypeInfo.label });
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(fileTypeInfo.icon, "image/svg+xml");
+      const svgEl = doc.documentElement;
+      if (svgEl && !svgEl.querySelector("parsererror")) {
+        iconContainer.appendChild(svgEl);
+      }
+      placeholderContainer.createDiv({ cls: "ftp-placeholder-label", text: fileTypeInfo.label });
       const lineCount = this.plugin.data.previewLines;
       placeholderContainer.style.height = `calc(1.4em * ${lineCount})`;
     } else {
@@ -797,7 +826,11 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
       previewLines.style.height = `calc(1.4em * ${lineCount})`;
     }
     previewItem.addEventListener("click", async () => {
-      await this.app.workspace.getLeaf(false).openFile(file);
+      try {
+        await this.app.workspace.getLeaf(false).openFile(file);
+      } catch (error) {
+        console.error("Error opening file:", error);
+      }
     });
     previewItem.addEventListener("contextmenu", (e) => {
       e.preventDefault();
@@ -873,7 +906,7 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
       menu.addItem((menuItem) => {
         menuItem.setTitle("Delete").setIcon("trash").onClick(async () => {
           try {
-            await this.app.vault.trash(file, true);
+            await this.app.fileManager.trashFile(file);
             this.renderPreview();
           } catch (error) {
             console.error("Failed to delete file:", error);

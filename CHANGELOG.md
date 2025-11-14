@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.1] - 2024-11-14
+
 ### Added
 - Duplicate file option in file context menu - creates a copy of the selected file with " copy" appended to the name
 - Table formatting removal in preview text - removes table separator lines (e.g., `|---|---|`) and pipe characters for cleaner preview display
