@@ -475,3 +475,32 @@
 .ftp-preview-content::-webkit-scrollbar-thumb:hover {
     background: var(--text-muted) !important;
 }
+
+/* Drag and drop styles */
+.ftp-preview-item.ftp-dragging,
+.ftp-folder-header.ftp-dragging {
+    opacity: 0.5;
+    cursor: move;
+}
+
+.ftp-folder-header.ftp-drop-target {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: -2px;
+}
+
+.ftp-drag-ghost {
+    /* Background color set dynamically with transparency */
+    padding: 6px 14px;
+    border-radius: 16px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    pointer-events: none;
+    display: inline-block;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

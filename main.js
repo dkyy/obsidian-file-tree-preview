@@ -103,6 +103,8 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
     this.isResizing = false;
     this.previewsCollapsed = false;
     this.iconizeDataCache = "";
+    this.dragGhost = null;
+    this.isRenderingTree = false;
     this.plugin = plugin;
     this.collapsedFolders = new Set(plugin.data.collapsedFolders);
   }
@@ -164,7 +166,10 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
       this.app.vault.on("delete", async () => await this.renderFileTree())
     );
     this.registerEvent(
-      this.app.vault.on("rename", async () => await this.renderFileTree())
+      this.app.vault.on("rename", async () => {
+        await this.renderFileTree();
+        this.renderPreview();
+      })
     );
     this.registerEvent(
       this.app.workspace.on("file-open", async (file) => {
@@ -272,6 +277,16 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
     }
     return null;
   }
+  isDescendantOf(possibleDescendant, possibleAncestor) {
+    let current = possibleDescendant;
+    while (current) {
+      if (current === possibleAncestor) {
+        return true;
+      }
+      current = current.parent;
+    }
+    return false;
+  }
   setupResizeHandle() {
     const handleMouseDown = (e) => {
       this.isResizing = true;
@@ -305,9 +320,17 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
     });
   }
   async renderFileTree() {
-    this.treeContainer.empty();
-    const root = this.app.vault.getRoot();
-    await this.renderFolder(root, this.treeContainer, 0);
+    if (this.isRenderingTree) {
+      return;
+    }
+    this.isRenderingTree = true;
+    try {
+      this.treeContainer.empty();
+      const root = this.app.vault.getRoot();
+      await this.renderFolder(root, this.treeContainer, 0);
+    } finally {
+      this.isRenderingTree = false;
+    }
   }
   async renderFolder(folder, container, level) {
     var _a, _b, _c;
@@ -387,6 +410,33 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
       if (isCollapsed) {
         folderContent.addClass("ftp-collapsed");
       }
+      folderHeader.setAttribute("draggable", "true");
+      folderHeader.addEventListener("dragstart", (e) => {
+        var _a2, _b2;
+        e.stopPropagation();
+        (_a2 = e.dataTransfer) == null ? void 0 : _a2.setData("text/plain", item.path);
+        (_b2 = e.dataTransfer) == null ? void 0 : _b2.setData("application/x-obsidian-folder", "true");
+        e.dataTransfer.effectAllowed = "move";
+        this.dragGhost = document.body.createDiv({ cls: "ftp-drag-ghost" });
+        this.dragGhost.setText(item.name);
+        this.dragGhost.style.position = "fixed";
+        this.dragGhost.style.left = "-9999px";
+        this.dragGhost.style.top = "0";
+        const accentColor = getComputedStyle(document.body).getPropertyValue("--interactive-accent").trim();
+        this.dragGhost.style.backgroundColor = `color-mix(in srgb, ${accentColor} 50%, transparent)`;
+        this.dragGhost.style.color = getComputedStyle(document.body).getPropertyValue("--text-on-accent").trim();
+        if (e.dataTransfer) {
+          e.dataTransfer.setDragImage(this.dragGhost, 50, 15);
+        }
+        folderHeader.addClass("ftp-dragging");
+      });
+      folderHeader.addEventListener("dragend", () => {
+        folderHeader.removeClass("ftp-dragging");
+        if (this.dragGhost) {
+          this.dragGhost.remove();
+          this.dragGhost = null;
+        }
+      });
       folderHeader.addEventListener("click", async (e) => {
         e.stopPropagation();
         this.selectedFolder = item;
@@ -437,9 +487,77 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
             }).open();
           });
         });
+        menu.addItem((menuItem) => {
+          menuItem.setTitle("Delete").setIcon("trash").onClick(() => {
+            new DeleteFolderModal(this.app, item.name, async () => {
+              try {
+                await this.app.vault.trash(item, true);
+              } catch (error) {
+                console.error("Failed to delete folder:", error);
+                new import_obsidian.Notice("Failed to delete folder");
+              }
+            }).open();
+          });
+        });
         menu.addSeparator();
         this.app.workspace.trigger("file-menu", menu, item, "file-explorer");
         menu.showAtMouseEvent(e);
+      });
+      folderHeader.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = "move";
+        folderHeader.addClass("ftp-drop-target");
+      });
+      folderHeader.addEventListener("dragleave", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        folderHeader.removeClass("ftp-drop-target");
+      });
+      folderHeader.addEventListener("drop", async (e) => {
+        var _a2, _b2;
+        e.preventDefault();
+        e.stopPropagation();
+        folderHeader.removeClass("ftp-drop-target");
+        const draggedPath = (_a2 = e.dataTransfer) == null ? void 0 : _a2.getData("text/plain");
+        if (!draggedPath)
+          return;
+        const draggedItem = this.app.vault.getAbstractFileByPath(draggedPath);
+        if (!draggedItem)
+          return;
+        const isFolder = ((_b2 = e.dataTransfer) == null ? void 0 : _b2.getData("application/x-obsidian-folder")) === "true";
+        if (isFolder && draggedItem instanceof import_obsidian.TFolder) {
+          if (draggedItem === item) {
+            new import_obsidian.Notice("Cannot move a folder into itself");
+            return;
+          }
+          if (this.isDescendantOf(item, draggedItem)) {
+            new import_obsidian.Notice("Cannot move a folder into one of its subfolders");
+            return;
+          }
+          if (draggedItem.parent === item) {
+            new import_obsidian.Notice("Folder is already in this location");
+            return;
+          }
+          const newPath = `${item.path}/${draggedItem.name}`;
+          try {
+            await this.app.vault.rename(draggedItem, newPath);
+          } catch (error) {
+            console.error("Failed to move folder:", error);
+            new import_obsidian.Notice("Failed to move folder");
+          }
+        } else if (draggedItem instanceof import_obsidian.TFile) {
+          if (draggedItem.parent === item) {
+            return;
+          }
+          const newPath = `${item.path}/${draggedItem.name}`;
+          try {
+            await this.app.vault.rename(draggedItem, newPath);
+          } catch (error) {
+            console.error("Failed to move file:", error);
+            new import_obsidian.Notice("Failed to move file");
+          }
+        }
       });
       await this.renderFolder(item, folderContent, level + 1);
     }
@@ -628,6 +746,31 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
     const isActive = this.activeFile === file;
     const classes = "ftp-preview-item" + (isActive ? " ftp-preview-item-active" : "");
     const previewItem = this.previewContent.createDiv({ cls: classes });
+    previewItem.setAttribute("draggable", "true");
+    previewItem.addEventListener("dragstart", (e) => {
+      var _a;
+      (_a = e.dataTransfer) == null ? void 0 : _a.setData("text/plain", file.path);
+      e.dataTransfer.effectAllowed = "move";
+      this.dragGhost = document.body.createDiv({ cls: "ftp-drag-ghost" });
+      this.dragGhost.setText(file.basename);
+      this.dragGhost.style.position = "fixed";
+      this.dragGhost.style.left = "-9999px";
+      this.dragGhost.style.top = "0";
+      const accentColor = getComputedStyle(document.body).getPropertyValue("--interactive-accent").trim();
+      this.dragGhost.style.backgroundColor = `color-mix(in srgb, ${accentColor} 50%, transparent)`;
+      this.dragGhost.style.color = getComputedStyle(document.body).getPropertyValue("--text-on-accent").trim();
+      if (e.dataTransfer) {
+        e.dataTransfer.setDragImage(this.dragGhost, 50, 15);
+      }
+      previewItem.addClass("ftp-dragging");
+    });
+    previewItem.addEventListener("dragend", () => {
+      previewItem.removeClass("ftp-dragging");
+      if (this.dragGhost) {
+        this.dragGhost.remove();
+        this.dragGhost = null;
+      }
+    });
     const filename = previewItem.createDiv({ cls: "ftp-preview-filename" });
     filename.createEl("strong", { text: file.basename });
     if ((fileTypeInfo == null ? void 0 : fileTypeInfo.type) === "image") {
@@ -707,9 +850,31 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
         });
       });
       menu.addItem((menuItem) => {
+        menuItem.setTitle("Duplicate").setIcon("copy").onClick(async () => {
+          const parentFolder = file.parent;
+          if (!parentFolder)
+            return;
+          const content = await this.app.vault.read(file);
+          const baseName = file.basename;
+          const extension = file.extension;
+          let duplicateName = `${baseName} copy`;
+          let duplicatePath = `${parentFolder.path}/${duplicateName}.${extension}`;
+          let counter = 1;
+          while (await this.app.vault.adapter.exists(duplicatePath)) {
+            duplicateName = `${baseName} copy ${counter}`;
+            duplicatePath = `${parentFolder.path}/${duplicateName}.${extension}`;
+            counter++;
+          }
+          const newFile = await this.app.vault.create(duplicatePath, content);
+          await this.app.workspace.getLeaf(false).openFile(newFile);
+          this.renderPreview();
+        });
+      });
+      menu.addItem((menuItem) => {
         menuItem.setTitle("Delete").setIcon("trash").onClick(async () => {
           try {
             await this.app.vault.trash(file, true);
+            this.renderPreview();
           } catch (error) {
             console.error("Failed to delete file:", error);
           }
@@ -736,7 +901,8 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
       }
     }
     text = text.replace(/^[\w-]+::.+$/gm, "");
-    text = text.replace(/^#+\s/gm, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1").replace(/^[>\-\*\+]\s/gm, "");
+    text = text.replace(/^\|?[\s\|\-:]+\|?\s*$/gm, "");
+    text = text.replace(/^#+\s/gm, "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1").replace(/^[>\-\*\+]\s/gm, "").replace(/\|/g, " ");
     if (this.plugin.data.removeLinkBrackets) {
       text = text.replace(/\[\[(.+?)\]\]/g, "$1").replace(/\[(.+?)\]\(.+?\)/g, "$1");
     }
@@ -788,6 +954,48 @@ var RenameModal = class extends import_obsidian.Modal {
       }
     });
     inputEl.focus();
+  }
+  onClose() {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
+};
+var DeleteFolderModal = class extends import_obsidian.Modal {
+  constructor(app, folderName, onConfirm) {
+    super(app);
+    this.folderName = folderName;
+    this.onConfirm = onConfirm;
+  }
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.createEl("h3", { text: "Delete Folder" });
+    const warningEl = contentEl.createDiv();
+    warningEl.style.marginBottom = "15px";
+    warningEl.style.color = "var(--text-error)";
+    warningEl.style.fontWeight = "500";
+    warningEl.createEl("p", {
+      text: `Are you sure you want to delete "${this.folderName}"?`
+    });
+    const detailEl = contentEl.createEl("p", {
+      text: "This will delete the folder and all of its contents (files and subfolders). This action cannot be undone."
+    });
+    detailEl.style.color = "var(--text-muted)";
+    detailEl.style.fontSize = "0.9em";
+    detailEl.style.marginTop = "8px";
+    const buttonContainer = contentEl.createDiv();
+    buttonContainer.style.display = "flex";
+    buttonContainer.style.justifyContent = "flex-end";
+    buttonContainer.style.gap = "8px";
+    buttonContainer.style.marginTop = "20px";
+    const cancelButton = buttonContainer.createEl("button", { text: "Cancel" });
+    cancelButton.addEventListener("click", () => this.close());
+    const deleteButton = buttonContainer.createEl("button", { text: "Delete", cls: "mod-warning" });
+    deleteButton.addEventListener("click", () => {
+      this.onConfirm();
+      this.close();
+    });
+    cancelButton.focus();
   }
   onClose() {
     const { contentEl } = this;

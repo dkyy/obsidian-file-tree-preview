@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, ItemView, TFile, TFolder, TAbstractFile, Menu, Modal } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, ItemView, TFile, TFolder, TAbstractFile, Menu, Modal, Notice } from 'obsidian';
 
 const VIEW_TYPE_FILE_TREE_PREVIEW = "file-tree-preview-view";
 
@@ -121,6 +121,8 @@ class FileTreePreviewView extends ItemView {
 	private isResizing: boolean = false;
 	private previewsCollapsed: boolean = false;
 	private iconizeDataCache: string = "";
+	private dragGhost: HTMLElement | null = null;
+	private isRenderingTree: boolean = false;
 
 	constructor(leaf: WorkspaceLeaf, plugin: FileTreePreviewPlugin) {
 		super(leaf);
@@ -222,7 +224,10 @@ class FileTreePreviewView extends ItemView {
 			this.app.vault.on("delete", async () => await this.renderFileTree())
 		);
 		this.registerEvent(
-			this.app.vault.on("rename", async () => await this.renderFileTree())
+			this.app.vault.on("rename", async () => {
+				await this.renderFileTree();
+				this.renderPreview();
+			})
 		);
 		this.registerEvent(
 			this.app.workspace.on("file-open", async (file) => {
@@ -363,6 +368,20 @@ class FileTreePreviewView extends ItemView {
 		return null;
 	}
 
+	private isDescendantOf(possibleDescendant: TFolder, possibleAncestor: TFolder): boolean {
+		// Check if possibleDescendant is a child or descendant of possibleAncestor
+		let current: TFolder | null = possibleDescendant;
+
+		while (current) {
+			if (current === possibleAncestor) {
+				return true;
+			}
+			current = current.parent;
+		}
+
+		return false;
+	}
+
 	private setupResizeHandle() {
 		const handleMouseDown = (e: MouseEvent) => {
 			this.isResizing = true;
@@ -405,9 +424,19 @@ class FileTreePreviewView extends ItemView {
 	}
 
 	async renderFileTree() {
-		this.treeContainer.empty();
-		const root = this.app.vault.getRoot();
-		await this.renderFolder(root, this.treeContainer, 0);
+		// Prevent concurrent renders that can cause duplicates
+		if (this.isRenderingTree) {
+			return;
+		}
+
+		this.isRenderingTree = true;
+		try {
+			this.treeContainer.empty();
+			const root = this.app.vault.getRoot();
+			await this.renderFolder(root, this.treeContainer, 0);
+		} finally {
+			this.isRenderingTree = false;
+		}
 	}
 
 	private async renderFolder(folder: TFolder, container: HTMLElement, level: number) {
@@ -523,6 +552,46 @@ class FileTreePreviewView extends ItemView {
 				folderContent.addClass("ftp-collapsed");
 			}
 
+			// Make folder draggable
+			folderHeader.setAttribute("draggable", "true");
+			folderHeader.addEventListener("dragstart", (e) => {
+				e.stopPropagation();
+				e.dataTransfer?.setData("text/plain", item.path);
+				e.dataTransfer?.setData("application/x-obsidian-folder", "true");
+				e.dataTransfer!.effectAllowed = "move";
+
+				// Create custom drag ghost - just folder name in a pill
+				this.dragGhost = document.body.createDiv({ cls: "ftp-drag-ghost" });
+				this.dragGhost.setText(item.name);
+
+				// Position it visibly but out of normal flow
+				this.dragGhost.style.position = "fixed";
+				this.dragGhost.style.left = "-9999px";
+				this.dragGhost.style.top = "0";
+
+				// Make it semi-transparent
+				const accentColor = getComputedStyle(document.body).getPropertyValue('--interactive-accent').trim();
+				this.dragGhost.style.backgroundColor = `color-mix(in srgb, ${accentColor} 50%, transparent)`;
+				this.dragGhost.style.color = getComputedStyle(document.body).getPropertyValue('--text-on-accent').trim();
+
+				// Set the custom drag image
+				if (e.dataTransfer) {
+					e.dataTransfer.setDragImage(this.dragGhost, 50, 15);
+				}
+
+				folderHeader.addClass("ftp-dragging");
+			});
+
+			folderHeader.addEventListener("dragend", () => {
+				folderHeader.removeClass("ftp-dragging");
+
+				// Clean up the drag ghost
+				if (this.dragGhost) {
+					this.dragGhost.remove();
+					this.dragGhost = null;
+				}
+			});
+
 			// Click on folder name to select (but not collapse)
 			folderHeader.addEventListener("click", async (e) => {
 				e.stopPropagation();
@@ -599,11 +668,104 @@ class FileTreePreviewView extends ItemView {
 						});
 				});
 
+				// Add "Delete" option
+				menu.addItem((menuItem) => {
+					menuItem
+						.setTitle("Delete")
+						.setIcon("trash")
+						.onClick(() => {
+							new DeleteFolderModal(this.app, item.name, async () => {
+								try {
+									await this.app.vault.trash(item, true);
+								} catch (error) {
+									console.error("Failed to delete folder:", error);
+									new Notice("Failed to delete folder");
+								}
+							}).open();
+						});
+				});
+
 				menu.addSeparator();
 
 				// Add standard Obsidian file menu options
 				this.app.workspace.trigger("file-menu", menu, item, "file-explorer");
 				menu.showAtMouseEvent(e);
+			});
+
+			// Drag and drop handlers - make folder a drop zone
+			folderHeader.addEventListener("dragover", (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				e.dataTransfer!.dropEffect = "move";
+				folderHeader.addClass("ftp-drop-target");
+			});
+
+			folderHeader.addEventListener("dragleave", (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				folderHeader.removeClass("ftp-drop-target");
+			});
+
+			folderHeader.addEventListener("drop", async (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				folderHeader.removeClass("ftp-drop-target");
+
+				const draggedPath = e.dataTransfer?.getData("text/plain");
+				if (!draggedPath) return;
+
+				const draggedItem = this.app.vault.getAbstractFileByPath(draggedPath);
+				if (!draggedItem) return;
+
+				const isFolder = e.dataTransfer?.getData("application/x-obsidian-folder") === "true";
+
+				// Handle folder drops
+				if (isFolder && draggedItem instanceof TFolder) {
+					// Can't move folder into itself
+					if (draggedItem === item) {
+						new Notice("Cannot move a folder into itself");
+						return;
+					}
+
+					// Can't move folder into one of its descendants
+					if (this.isDescendantOf(item, draggedItem)) {
+						new Notice("Cannot move a folder into one of its subfolders");
+						return;
+					}
+
+					// Don't move if already in this folder
+					if (draggedItem.parent === item) {
+						new Notice("Folder is already in this location");
+						return;
+					}
+
+					// Move the folder
+					const newPath = `${item.path}/${draggedItem.name}`;
+					try {
+						await this.app.vault.rename(draggedItem, newPath);
+						// Vault rename event will trigger re-render automatically
+					} catch (error) {
+						console.error("Failed to move folder:", error);
+						new Notice("Failed to move folder");
+					}
+				}
+				// Handle file drops
+				else if (draggedItem instanceof TFile) {
+					// Don't move if already in this folder
+					if (draggedItem.parent === item) {
+						return; // Silent for files as it's obvious
+					}
+
+					// Move the file
+					const newPath = `${item.path}/${draggedItem.name}`;
+					try {
+						await this.app.vault.rename(draggedItem, newPath);
+						// Vault rename event will trigger re-render automatically
+					} catch (error) {
+						console.error("Failed to move file:", error);
+						new Notice("Failed to move file");
+					}
+				}
 			});
 
 			await this.renderFolder(item, folderContent, level + 1);
@@ -859,6 +1021,47 @@ class FileTreePreviewView extends ItemView {
 
 		const previewItem = this.previewContent.createDiv({ cls: classes });
 
+		// Make preview card draggable
+		previewItem.setAttribute("draggable", "true");
+		previewItem.addEventListener("dragstart", (e) => {
+			e.dataTransfer?.setData("text/plain", file.path);
+			e.dataTransfer!.effectAllowed = "move";
+
+			// Create custom drag ghost - just filename in a pill
+			this.dragGhost = document.body.createDiv({ cls: "ftp-drag-ghost" });
+			this.dragGhost.setText(file.basename);
+
+			// Position it visibly but out of normal flow
+			// The element needs to be rendered for setDragImage to work
+			this.dragGhost.style.position = "fixed";
+			this.dragGhost.style.left = "-9999px";
+			this.dragGhost.style.top = "0";
+
+			// Get the computed accent color and make it 50% transparent
+			// setDragImage doesn't respect opacity CSS, so we need to use rgba
+			const accentColor = getComputedStyle(document.body).getPropertyValue('--interactive-accent').trim();
+			// Convert hex to rgba with 0.5 opacity, or use a fallback
+			this.dragGhost.style.backgroundColor = `color-mix(in srgb, ${accentColor} 50%, transparent)`;
+			this.dragGhost.style.color = getComputedStyle(document.body).getPropertyValue('--text-on-accent').trim();
+
+			// Set the custom drag image (centered)
+			if (e.dataTransfer) {
+				// Use a small offset to center the pill under the cursor
+				e.dataTransfer.setDragImage(this.dragGhost, 50, 15);
+			}
+
+			previewItem.addClass("ftp-dragging");
+		});
+		previewItem.addEventListener("dragend", () => {
+			previewItem.removeClass("ftp-dragging");
+
+			// Clean up the drag ghost
+			if (this.dragGhost) {
+				this.dragGhost.remove();
+				this.dragGhost = null;
+			}
+		});
+
 		// Filename in bold
 		const filename = previewItem.createDiv({ cls: "ftp-preview-filename" });
 		filename.createEl("strong", { text: file.basename });
@@ -979,6 +1182,41 @@ class FileTreePreviewView extends ItemView {
 					});
 			});
 
+			// Add "Duplicate" option
+			menu.addItem((menuItem) => {
+				menuItem
+					.setTitle("Duplicate")
+					.setIcon("copy")
+					.onClick(async () => {
+						const parentFolder = file.parent;
+						if (!parentFolder) return;
+
+						// Read the original file content
+						const content = await this.app.vault.read(file);
+
+						// Create duplicate name
+						const baseName = file.basename;
+						const extension = file.extension;
+						let duplicateName = `${baseName} copy`;
+						let duplicatePath = `${parentFolder.path}/${duplicateName}.${extension}`;
+						let counter = 1;
+
+						// Handle naming conflicts
+						while (await this.app.vault.adapter.exists(duplicatePath)) {
+							duplicateName = `${baseName} copy ${counter}`;
+							duplicatePath = `${parentFolder.path}/${duplicateName}.${extension}`;
+							counter++;
+						}
+
+						// Create the duplicate file
+						const newFile = await this.app.vault.create(duplicatePath, content);
+						await this.app.workspace.getLeaf(false).openFile(newFile);
+
+						// Refresh the preview panel to show the new file
+						this.renderPreview();
+					});
+			});
+
 			// Add "Delete" option
 			menu.addItem((menuItem) => {
 				menuItem
@@ -987,6 +1225,8 @@ class FileTreePreviewView extends ItemView {
 					.onClick(async () => {
 						try {
 							await this.app.vault.trash(file, true);
+							// Refresh the preview panel to remove the deleted file
+							this.renderPreview();
 						} catch (error) {
 							console.error("Failed to delete file:", error);
 						}
@@ -1024,12 +1264,16 @@ class FileTreePreviewView extends ItemView {
 		// Remove inline properties (key:: value format)
 		text = text.replace(/^[\w-]+::.+$/gm, "");
 
+		// Remove table separator lines (lines with only pipes, dashes, spaces)
+		text = text.replace(/^\|?[\s\|\-:]+\|?\s*$/gm, "");
+
 		// Clean up markdown formatting for preview
 		text = text
 			.replace(/^#+\s/gm, "") // Remove headers
 			.replace(/\*\*(.+?)\*\*/g, "$1") // Remove bold
 			.replace(/\*(.+?)\*/g, "$1") // Remove italic
-			.replace(/^[>\-\*\+]\s/gm, ""); // Remove list markers and blockquotes
+			.replace(/^[>\-\*\+]\s/gm, "") // Remove list markers and blockquotes
+			.replace(/\|/g, " "); // Remove table pipes
 
 		// Conditionally remove link brackets based on settings
 		if (this.plugin.data.removeLinkBrackets) {
@@ -1104,6 +1348,63 @@ class RenameModal extends Modal {
 		});
 
 		inputEl.focus();
+	}
+
+	onClose() {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+class DeleteFolderModal extends Modal {
+	private folderName: string;
+	private onConfirm: () => void;
+
+	constructor(app: App, folderName: string, onConfirm: () => void) {
+		super(app);
+		this.folderName = folderName;
+		this.onConfirm = onConfirm;
+	}
+
+	onOpen() {
+		const { contentEl } = this;
+		contentEl.empty();
+
+		contentEl.createEl("h3", { text: "Delete Folder" });
+
+		const warningEl = contentEl.createDiv();
+		warningEl.style.marginBottom = "15px";
+		warningEl.style.color = "var(--text-error)";
+		warningEl.style.fontWeight = "500";
+
+		warningEl.createEl("p", {
+			text: `Are you sure you want to delete "${this.folderName}"?`
+		});
+
+		const detailEl = contentEl.createEl("p", {
+			text: "This will delete the folder and all of its contents (files and subfolders). This action cannot be undone."
+		});
+		detailEl.style.color = "var(--text-muted)";
+		detailEl.style.fontSize = "0.9em";
+		detailEl.style.marginTop = "8px";
+
+		const buttonContainer = contentEl.createDiv();
+		buttonContainer.style.display = "flex";
+		buttonContainer.style.justifyContent = "flex-end";
+		buttonContainer.style.gap = "8px";
+		buttonContainer.style.marginTop = "20px";
+
+		const cancelButton = buttonContainer.createEl("button", { text: "Cancel" });
+		cancelButton.addEventListener("click", () => this.close());
+
+		const deleteButton = buttonContainer.createEl("button", { text: "Delete", cls: "mod-warning" });
+		deleteButton.addEventListener("click", () => {
+			this.onConfirm();
+			this.close();
+		});
+
+		// Focus cancel button by default for safety
+		cancelButton.focus();
 	}
 
 	onClose() {
