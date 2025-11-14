@@ -1,6 +1,6 @@
 # File Tree Preview Plugin
 
-An Obsidian plugin that displays folders in a tree structure with preview cards showing file content snippets, following the macOS column-based navigation pattern used in Finder, Mail, and Notes.
+An Obsidian plugin that displays folders in a tree structure with preview cards showing file content snippets.
 
 ![File Tree Preview Screenshot](screenshot.png)
 
