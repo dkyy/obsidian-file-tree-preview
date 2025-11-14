@@ -1,7 +1,7 @@
 {
   "name": "file-tree-preview",
   "version": "1.0.1",
-  "description": "File tree with Ulysses-style preview panel",
+  "description": "Navigate folders in a tree structure with preview cards showing file content snippets.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
