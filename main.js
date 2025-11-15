@@ -1139,7 +1139,7 @@ var FileTreePreviewSettingTab = class extends import_obsidian.PluginSettingTab {
         }
       });
     }));
-    new import_obsidian.Setting(containerEl).setName("Remove link brackets").setDesc("Remove brackets from wiki links ([[link]]) and markdown links ([text](url)) in preview text").addToggle((toggle) => toggle.setValue(this.plugin.data.removeLinkBrackets).onChange(async (value) => {
+    new import_obsidian.Setting(containerEl).setName("Remove link brackets").setDesc("Remove brackets from wiki links and Markdown links in preview text").addToggle((toggle) => toggle.setValue(this.plugin.data.removeLinkBrackets).onChange(async (value) => {
       this.plugin.data.removeLinkBrackets = value;
       await this.plugin.savePluginData();
       this.app.workspace.getLeavesOfType(VIEW_TYPE_FILE_TREE_PREVIEW).forEach((leaf) => {
@@ -1154,7 +1154,7 @@ var FileTreePreviewSettingTab = class extends import_obsidian.PluginSettingTab {
       cls: "ftp-kofi-text"
     });
     const kofiLink = kofiText.createEl("a", {
-      text: "buying me a coffee",
+      text: "Buying me a coffee",
       href: "https://ko-fi.com/J3J61ODQ3A",
       cls: "ftp-kofi-link"
     });

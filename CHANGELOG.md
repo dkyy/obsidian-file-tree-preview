@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.8] - 2024-11-15
+
+### Fixed
+- Fixed sentence case issues identified by eslint-plugin-obsidianmd:
+  - Capitalized "Markdown" as it's a proper noun (name of the markup language)
+  - Capitalized "Buying" in Ko-fi link text for proper sentence case
+  - Removed example syntax from link brackets setting description to avoid sentence detection issues
+
 ## [1.0.7] - 2024-11-15
 
 ### Fixed
