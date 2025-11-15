@@ -1,7 +1,7 @@
 {
     "id": "file-tree-preview",
     "name": "File Tree Preview",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "minAppVersion": "0.15.0",
     "description": "Navigate folders in a tree structure with preview cards showing file content snippets.",
     "author": "David Young",

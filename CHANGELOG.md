@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.3] - 2024-11-15
+
+### Fixed
+- Removed unused variable assignment (detailEl)
+- Removed unnecessary type assertions by using proper Obsidian API
+- Fixed sentence case in sort menu items (e.g., "Name (a to z)", "Date modified")
+
 ## [1.0.2] - 2024-11-14
 
 ### Fixed

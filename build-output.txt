@@ -1,0 +1,4 @@
+
+> file-tree-preview@1.0.1 build
+> tsc -noEmit -skipLibCheck && node esbuild.config.mjs production
+

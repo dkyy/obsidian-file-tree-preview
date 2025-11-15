@@ -116,7 +116,7 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
     return "folder-tree";
   }
   async onOpen() {
-    const container = this.containerEl.children[1];
+    const container = this.contentEl;
     container.empty();
     container.addClass("file-tree-preview-container");
     await this.waitForIconizePlugin();
@@ -251,12 +251,11 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
     const allCards = this.previewContent.querySelectorAll(".ftp-preview-item");
     allCards.forEach((card) => {
       var _a, _b;
-      const htmlCard = card;
       const filename = (_a = card.querySelector(".ftp-preview-filename strong")) == null ? void 0 : _a.textContent;
       if (filename === ((_b = this.activeFile) == null ? void 0 : _b.basename)) {
-        htmlCard.addClass("ftp-preview-item-active");
+        card.addClass("ftp-preview-item-active");
       } else {
-        htmlCard.removeClass("ftp-preview-item-active");
+        card.removeClass("ftp-preview-item-active");
       }
     });
   }
@@ -618,7 +617,7 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
     sortButton.addEventListener("click", (e) => {
       const menu = new import_obsidian.Menu();
       menu.addItem((item) => {
-        item.setTitle("Name (A to Z)").setChecked(this.plugin.data.sortOrder === "name-asc").onClick(() => {
+        item.setTitle("Name (a to z)").setChecked(this.plugin.data.sortOrder === "name-asc").onClick(() => {
           const updateSort = async () => {
             this.plugin.data.sortOrder = "name-asc";
             await this.plugin.savePluginData();
@@ -628,7 +627,7 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
         });
       });
       menu.addItem((item) => {
-        item.setTitle("Name (Z to A)").setChecked(this.plugin.data.sortOrder === "name-desc").onClick(() => {
+        item.setTitle("Name (z to a)").setChecked(this.plugin.data.sortOrder === "name-desc").onClick(() => {
           const updateSort = async () => {
             this.plugin.data.sortOrder = "name-desc";
             await this.plugin.savePluginData();
@@ -639,7 +638,7 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
       });
       menu.addSeparator();
       menu.addItem((item) => {
-        item.setTitle("Modified (newest first)").setChecked(this.plugin.data.sortOrder === "modified-new").onClick(() => {
+        item.setTitle("Date modified (newest first)").setChecked(this.plugin.data.sortOrder === "modified-new").onClick(() => {
           const updateSort = async () => {
             this.plugin.data.sortOrder = "modified-new";
             await this.plugin.savePluginData();
@@ -649,7 +648,7 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
         });
       });
       menu.addItem((item) => {
-        item.setTitle("Modified (oldest first)").setChecked(this.plugin.data.sortOrder === "modified-old").onClick(() => {
+        item.setTitle("Date modified (oldest first)").setChecked(this.plugin.data.sortOrder === "modified-old").onClick(() => {
           const updateSort = async () => {
             this.plugin.data.sortOrder = "modified-old";
             await this.plugin.savePluginData();
@@ -660,7 +659,7 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
       });
       menu.addSeparator();
       menu.addItem((item) => {
-        item.setTitle("Created (newest first)").setChecked(this.plugin.data.sortOrder === "created-new").onClick(() => {
+        item.setTitle("Date created (newest first)").setChecked(this.plugin.data.sortOrder === "created-new").onClick(() => {
           const updateSort = async () => {
             this.plugin.data.sortOrder = "created-new";
             await this.plugin.savePluginData();
@@ -670,7 +669,7 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
         });
       });
       menu.addItem((item) => {
-        item.setTitle("Created (oldest first)").setChecked(this.plugin.data.sortOrder === "created-old").onClick(() => {
+        item.setTitle("Date created (oldest first)").setChecked(this.plugin.data.sortOrder === "created-old").onClick(() => {
           const updateSort = async () => {
             this.plugin.data.sortOrder = "created-old";
             await this.plugin.savePluginData();
@@ -1062,7 +1061,7 @@ var DeleteFolderModal = class extends import_obsidian.Modal {
     warningEl.createEl("p", {
       text: `Are you sure you want to delete "${this.folderName}"?`
     });
-    const detailEl = contentEl.createEl("p", {
+    contentEl.createEl("p", {
       text: "This will delete the folder and all of its contents (files and subfolders). This action cannot be undone.",
       cls: "ftp-delete-detail"
     });
