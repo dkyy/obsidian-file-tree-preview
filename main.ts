@@ -50,7 +50,7 @@ export default class FileTreePreviewPlugin extends Plugin {
 			(leaf) => new FileTreePreviewView(leaf, this)
 		);
 
-		this.addRibbonIcon("folder-tree", "File Tree Preview", () => {
+		this.addRibbonIcon("folder-tree", "File tree preview", () => {
 			this.activateView().catch(console.error);
 		});
 
@@ -105,7 +105,7 @@ export default class FileTreePreviewPlugin extends Plugin {
 		}
 
 		if (leaf) {
-			workspace.revealLeaf(leaf);
+			await workspace.revealLeaf(leaf);
 		}
 	}
 }
@@ -138,7 +138,7 @@ class FileTreePreviewView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return "File Tree Preview";
+		return "File tree preview";
 	}
 
 	getIcon(): string {
@@ -446,8 +446,8 @@ class FileTreePreviewView extends ItemView {
 	private async renderFolder(folder: TFolder, container: HTMLElement, level: number) {
 		// Get only folders, sorted alphabetically
 		const folders = folder.children
-			.filter((item) => item instanceof TFolder)
-			.sort((a, b) => a.name.localeCompare(b.name)) as TFolder[];
+			.filter((item): item is TFolder => item instanceof TFolder)
+			.sort((a, b) => a.name.localeCompare(b.name));
 
 		for (const item of folders) {
 			const isSelected = this.selectedFolder === item;
@@ -976,8 +976,8 @@ class FileTreePreviewView extends ItemView {
 
 		// Get all files in the selected folder (not subfolders)
 		const files = this.selectedFolder.children.filter(
-			(child) => child instanceof TFile
-		) as TFile[];
+			(child): child is TFile => child instanceof TFile
+		);
 
 		if (files.length === 0) {
 			this.previewContent.createDiv({
@@ -1505,11 +1505,11 @@ class FileTreePreviewSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		new Setting(containerEl).setHeading().setName('File Tree Preview settings');
+		new Setting(containerEl).setHeading().setName('File tree preview settings');
 
 		new Setting(containerEl)
 			.setName('Active on launch')
-			.setDesc('Automatically open File Tree Preview when Obsidian starts')
+			.setDesc('Automatically open the file tree preview when Obsidian starts')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.data.activeOnLaunch)
 				.onChange(async (value) => {

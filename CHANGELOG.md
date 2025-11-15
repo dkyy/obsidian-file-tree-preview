@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.5] - 2024-11-15
+
+### Fixed
+- All remaining sentence case issues in UI text (ribbon icon, settings, descriptions)
+- Fixed unawaited promise in activateView
+- Replaced type assertions with type predicates (TypeScript best practice)
+
 ## [1.0.4] - 2024-11-15
 
 ### Fixed

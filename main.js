@@ -48,7 +48,7 @@ var FileTreePreviewPlugin = class extends import_obsidian.Plugin {
       VIEW_TYPE_FILE_TREE_PREVIEW,
       (leaf) => new FileTreePreviewView(leaf, this)
     );
-    this.addRibbonIcon("folder-tree", "File Tree Preview", () => {
+    this.addRibbonIcon("folder-tree", "File tree preview", () => {
       this.activateView().catch(console.error);
     });
     this.addCommand({
@@ -89,7 +89,7 @@ var FileTreePreviewPlugin = class extends import_obsidian.Plugin {
       await (leaf == null ? void 0 : leaf.setViewState({ type: VIEW_TYPE_FILE_TREE_PREVIEW, active: true }));
     }
     if (leaf) {
-      workspace.revealLeaf(leaf);
+      await workspace.revealLeaf(leaf);
     }
   }
 };
@@ -110,7 +110,7 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
     return VIEW_TYPE_FILE_TREE_PREVIEW;
   }
   getDisplayText() {
-    return "File Tree Preview";
+    return "File tree preview";
   }
   getIcon() {
     return "folder-tree";
@@ -1089,8 +1089,8 @@ var FileTreePreviewSettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    new import_obsidian.Setting(containerEl).setHeading().setName("File Tree Preview settings");
-    new import_obsidian.Setting(containerEl).setName("Active on launch").setDesc("Automatically open File Tree Preview when Obsidian starts").addToggle((toggle) => toggle.setValue(this.plugin.data.activeOnLaunch).onChange(async (value) => {
+    new import_obsidian.Setting(containerEl).setHeading().setName("File tree preview settings");
+    new import_obsidian.Setting(containerEl).setName("Active on launch").setDesc("Automatically open the file tree preview when Obsidian starts").addToggle((toggle) => toggle.setValue(this.plugin.data.activeOnLaunch).onChange(async (value) => {
       this.plugin.data.activeOnLaunch = value;
       await this.plugin.savePluginData();
     }));
