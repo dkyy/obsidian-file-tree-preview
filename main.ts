@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, ItemView, TFile, TFolder, TAbstractFile, Menu, Modal, Notice, setIcon } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, WorkspaceLeaf, ItemView, TFile, TFolder, Menu, Modal, Notice, setIcon } from 'obsidian';
 
 const VIEW_TYPE_FILE_TREE_PREVIEW = "file-tree-preview-view";
 
@@ -32,6 +32,13 @@ const DEFAULT_DATA: FileTreePreviewData = {
 	folderIconStyle: "custom"
 };
 
+interface IconizePlugin {
+	data: Record<string, unknown>;
+	api: {
+		getIconByName: (name: string) => { svgElement: string } | null;
+	};
+}
+
 export default class FileTreePreviewPlugin extends Plugin {
 	data: FileTreePreviewData;
 
@@ -44,14 +51,14 @@ export default class FileTreePreviewPlugin extends Plugin {
 		);
 
 		this.addRibbonIcon("folder-tree", "File Tree Preview", () => {
-			this.activateView();
+			this.activateView().catch(console.error);
 		});
 
 		this.addCommand({
 			id: "open",
 			name: "Open",
 			callback: () => {
-				this.activateView();
+				this.activateView().catch(console.error);
 			}
 		});
 
@@ -60,7 +67,7 @@ export default class FileTreePreviewPlugin extends Plugin {
 		// Activate view on launch if setting is enabled
 		if (this.data.activeOnLaunch) {
 			this.app.workspace.onLayoutReady(() => {
-				this.activateView();
+				this.activateView().catch(console.error);
 			});
 		}
 	}
@@ -70,16 +77,12 @@ export default class FileTreePreviewPlugin extends Plugin {
 	}
 
 	async loadPluginData() {
-		const loadedData = await super.loadData();
+		const loadedData = await super.loadData() as Partial<FileTreePreviewData> & { showFolderIcons?: boolean } | null;
 		this.data = Object.assign({}, DEFAULT_DATA, loadedData);
 
 		// Migrate old showFolderIcons boolean to new folderIconStyle string
 		if (loadedData && 'showFolderIcons' in loadedData) {
-			// @ts-ignore - accessing old property for migration
 			this.data.folderIconStyle = loadedData.showFolderIcons ? "folder" : "none";
-			// Remove old property and save
-			// @ts-ignore
-			delete loadedData.showFolderIcons;
 			await this.savePluginData();
 		}
 	}
@@ -147,10 +150,6 @@ class FileTreePreviewView extends ItemView {
 		container.empty();
 		container.addClass("file-tree-preview-container");
 
-		// Remove default padding to eliminate blank space at bottom
-		container.style.padding = "0";
-		container.style.margin = "0";
-
 		// Wait for Iconize plugin to be fully loaded
 		await this.waitForIconizePlugin();
 
@@ -180,11 +179,10 @@ class FileTreePreviewView extends ItemView {
 
 		if (isTouchDevice) {
 			// On touch devices, make both columns equal width
-			this.treeContainer.style.flex = "1";
-			this.treeContainer.style.width = "auto";
+			this.treeContainer.addClass("ftp-touch-equal");
 		} else {
 			// On non-touch devices, use saved width and allow resizing
-			this.treeContainer.style.width = `${this.plugin.data.treeWidth}px`;
+			this.treeContainer.setCssProps({ width: `${this.plugin.data.treeWidth}px` });
 		}
 
 		// Resize handle
@@ -193,7 +191,7 @@ class FileTreePreviewView extends ItemView {
 			this.setupResizeHandle();
 		} else {
 			// Hide resize handle on touch devices
-			this.resizeHandle.style.display = "none";
+			this.resizeHandle.addClass("ftp-hidden");
 		}
 
 		// Right column: preview
@@ -269,7 +267,7 @@ class FileTreePreviewView extends ItemView {
 		let waited = 0;
 
 		while (waited < maxWaitTime) {
-			const iconFolderPlugin = (this.app as any).plugins?.plugins?.['obsidian-icon-folder'];
+			const iconFolderPlugin = (this.app as App & { plugins?: { plugins?: Record<string, IconizePlugin> } }).plugins?.plugins?.['obsidian-icon-folder'];
 			if (iconFolderPlugin?.data && iconFolderPlugin?.api) {
 				// Plugin is loaded
 				return;
@@ -282,9 +280,9 @@ class FileTreePreviewView extends ItemView {
 
 	private startIconizeDataPolling() {
 		// Check for Iconize data changes every 500ms
-		const intervalId = window.setInterval(async () => {
+		const intervalId = window.setInterval(() => {
 			try {
-				const iconFolderPlugin = (this.app as any).plugins?.plugins?.['obsidian-icon-folder'];
+				const iconFolderPlugin = (this.app as App & { plugins?: { plugins?: Record<string, IconizePlugin> } }).plugins?.plugins?.['obsidian-icon-folder'];
 				if (iconFolderPlugin?.data) {
 					// Create a snapshot of current icon data (excluding settings)
 					const currentData = JSON.stringify(
@@ -296,13 +294,13 @@ class FileTreePreviewView extends ItemView {
 					// Check if data has changed
 					if (this.iconizeDataCache && currentData !== this.iconizeDataCache) {
 						this.iconizeDataCache = currentData;
-						await this.renderFileTree();
+						this.renderFileTree().catch(console.error);
 					} else if (!this.iconizeDataCache) {
 						// Initialize cache
 						this.iconizeDataCache = currentData;
 					}
 				}
-			} catch (e) {
+			} catch {
 				// Silently fail
 			}
 		}, 500);
@@ -338,26 +336,27 @@ class FileTreePreviewView extends ItemView {
 	updateActiveHighlight() {
 		// Update highlight classes without re-rendering
 		const allCards = this.previewContent.querySelectorAll('.ftp-preview-item');
-		allCards.forEach((card: HTMLElement) => {
+		allCards.forEach((card) => {
+			const htmlCard = card as HTMLElement;
 			const filename = card.querySelector('.ftp-preview-filename strong')?.textContent;
 			if (filename === this.activeFile?.basename) {
-				card.addClass('ftp-preview-item-active');
+				htmlCard.addClass('ftp-preview-item-active');
 			} else {
-				card.removeClass('ftp-preview-item-active');
+				htmlCard.removeClass('ftp-preview-item-active');
 			}
 		});
 	}
 
-	private async getFolderIcon(folder: TFolder): Promise<{ type: 'emoji' | 'icon', value: string } | null> {
+	private getFolderIcon(folder: TFolder): { type: 'emoji' | 'icon', value: string } | null {
 		// Try to get custom folder icon from Iconize plugin (obsidian-icon-folder)
 		try {
-			const iconFolderPlugin = (this.app as any).plugins?.plugins?.['obsidian-icon-folder'];
+			const iconFolderPlugin = (this.app as App & { plugins?: { plugins?: Record<string, IconizePlugin> } }).plugins?.plugins?.['obsidian-icon-folder'];
 			if (iconFolderPlugin) {
 				// Access the plugin's data which stores folder path -> icon mappings
 				const iconData = iconFolderPlugin.data;
 
 				if (iconData && iconData[folder.path]) {
-					const iconValue = iconData[folder.path];
+					const iconValue = iconData[folder.path] as string;
 
 					// Check if it's an emoji or an icon identifier
 					if (/[\p{Emoji}]/u.test(iconValue)) {
@@ -368,7 +367,7 @@ class FileTreePreviewView extends ItemView {
 					}
 				}
 			}
-		} catch (e) {
+		} catch {
 			// Silently fail if plugin not available
 		}
 		return null;
@@ -392,10 +391,10 @@ class FileTreePreviewView extends ItemView {
 		const handleMouseDown = (e: MouseEvent) => {
 			this.isResizing = true;
 			e.preventDefault();
-			document.body.style.cursor = 'col-resize';
+			document.body.setCssProps({ cursor: 'col-resize' });
 		};
 
-		const handleMouseMove = async (e: MouseEvent) => {
+		const handleMouseMove = (e: MouseEvent) => {
 			if (!this.isResizing) return;
 
 			const containerRect = this.mainLayout.getBoundingClientRect();
@@ -406,15 +405,15 @@ class FileTreePreviewView extends ItemView {
 			const maxWidth = containerRect.width * 0.8;
 			const clampedWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
 
-			this.treeContainer.style.width = `${clampedWidth}px`;
+			this.treeContainer.setCssProps({ width: `${clampedWidth}px` });
 			this.plugin.data.treeWidth = clampedWidth;
 		};
 
-		const handleMouseUp = async () => {
+		const handleMouseUp = () => {
 			if (this.isResizing) {
 				this.isResizing = false;
-				document.body.style.cursor = '';
-				await this.plugin.savePluginData();
+				document.body.setCssProps({ cursor: '' });
+				this.plugin.savePluginData().catch(console.error);
 			}
 		};
 
@@ -457,7 +456,7 @@ class FileTreePreviewView extends ItemView {
 			const isCollapsed = this.collapsedFolders.has(item.path);
 
 			const folderEl = container.createDiv({ cls: "ftp-folder-item" });
-			folderEl.style.paddingLeft = `calc(var(--ftp-folder-indent) * ${level})`;
+			folderEl.setCssProps({ paddingLeft: `calc(var(--ftp-folder-indent) * ${level})` });
 
 			const folderHeader = folderEl.createDiv({
 				cls: "ftp-folder-header" + (isSelected ? " ftp-selected" : "")
@@ -475,7 +474,7 @@ class FileTreePreviewView extends ItemView {
 				}
 
 				// Toggle collapse on caret click
-				caret.addEventListener("click", async (e) => {
+				caret.addEventListener("click", (e) => {
 					e.stopPropagation();
 					const willBeCollapsed = !folderContent.hasClass("ftp-collapsed");
 					folderContent.toggleClass("ftp-collapsed", willBeCollapsed);
@@ -488,7 +487,7 @@ class FileTreePreviewView extends ItemView {
 						this.collapsedFolders.delete(item.path);
 					}
 					this.plugin.data.collapsedFolders = Array.from(this.collapsedFolders);
-					await this.plugin.savePluginData();
+					this.plugin.savePluginData().catch(console.error);
 				});
 			} else {
 				// Add spacer for alignment when no caret
@@ -503,7 +502,7 @@ class FileTreePreviewView extends ItemView {
 				folderNameSpan.setText(item.name);
 			} else if (iconStyle === "custom") {
 				// Try to get custom icon from folder properties
-				const customIcon = await this.getFolderIcon(item);
+				const customIcon = this.getFolderIcon(item);
 				// Default icon: TiFolder for folders without subfolders, LiFolders for folders with subfolders
 				const defaultIcon = hasSubfolders ? "LiFolders" : "TiFolder";
 				const iconToRender = customIcon ? customIcon.value : defaultIcon;
@@ -514,7 +513,7 @@ class FileTreePreviewView extends ItemView {
 				} else {
 					// Icon identifier - use Iconize plugin to render it
 					try {
-						const iconFolderPlugin = (this.app as any).plugins?.plugins?.['obsidian-icon-folder'];
+						const iconFolderPlugin = (this.app as App & { plugins?: { plugins?: Record<string, IconizePlugin> } }).plugins?.plugins?.['obsidian-icon-folder'];
 
 						if (iconFolderPlugin?.api?.getIconByName) {
 							// Try to get the icon element from Iconize
@@ -554,8 +553,8 @@ class FileTreePreviewView extends ItemView {
 						} else {
 							folderNameSpan.setText(item.name);
 						}
-					} catch (e) {
-						console.error("Error rendering icon:", e);
+					} catch (error) {
+						console.error("Error rendering icon:", error);
 						folderNameSpan.setText(item.name);
 					}
 				}
@@ -576,21 +575,23 @@ class FileTreePreviewView extends ItemView {
 				e.stopPropagation();
 				e.dataTransfer?.setData("text/plain", item.path);
 				e.dataTransfer?.setData("application/x-obsidian-folder", "true");
-				e.dataTransfer!.effectAllowed = "move";
+				if (e.dataTransfer) {
+					e.dataTransfer.effectAllowed = "move";
+				}
 
 				// Create custom drag ghost - just folder name in a pill
 				this.dragGhost = document.body.createDiv({ cls: "ftp-drag-ghost" });
 				this.dragGhost.setText(item.name);
 
-				// Position it visibly but out of normal flow
-				this.dragGhost.style.position = "fixed";
-				this.dragGhost.style.left = "-9999px";
-				this.dragGhost.style.top = "0";
-
-				// Make it semi-transparent
+				// Get the computed accent color and make it 50% transparent
 				const accentColor = getComputedStyle(document.body).getPropertyValue('--interactive-accent').trim();
-				this.dragGhost.style.backgroundColor = `color-mix(in srgb, ${accentColor} 50%, transparent)`;
-				this.dragGhost.style.color = getComputedStyle(document.body).getPropertyValue('--text-on-accent').trim();
+				this.dragGhost.setCssProps({
+					position: "fixed",
+					left: "-9999px",
+					top: "0",
+					backgroundColor: `color-mix(in srgb, ${accentColor} 50%, transparent)`,
+					color: getComputedStyle(document.body).getPropertyValue('--text-on-accent').trim()
+				});
 
 				// Set the custom drag image
 				if (e.dataTransfer) {
@@ -611,15 +612,12 @@ class FileTreePreviewView extends ItemView {
 			});
 
 			// Click on folder name to select (but not collapse)
-			folderHeader.addEventListener("click", async (e) => {
-				e.stopPropagation();
+			folderHeader.addEventListener("click", () => {
 				this.selectedFolder = item;
-				try {
-					await this.renderFileTree();
-					await this.renderPreview();
-				} catch (error) {
-					console.error("Error rendering folder:", error);
-				}
+				Promise.all([
+					this.renderFileTree(),
+					this.renderPreview()
+				]).catch(console.error);
 			});
 
 			// Right-click context menu for folders
@@ -632,19 +630,22 @@ class FileTreePreviewView extends ItemView {
 					menuItem
 						.setTitle("New file")
 						.setIcon("document")
-						.onClick(async () => {
-							const fileName = "Untitled.md";
-							let filePath = `${item.path}/${fileName}`;
-							let counter = 1;
+						.onClick(() => {
+							const createFile = async () => {
+								const fileName = "Untitled.md";
+								let filePath = `${item.path}/${fileName}`;
+								let counter = 1;
 
-							// Handle naming conflicts
-							while (await this.app.vault.adapter.exists(filePath)) {
-								filePath = `${item.path}/Untitled ${counter}.md`;
-								counter++;
-							}
+								// Handle naming conflicts
+								while (await this.app.vault.adapter.exists(filePath)) {
+									filePath = `${item.path}/Untitled ${counter}.md`;
+									counter++;
+								}
 
-							const file = await this.app.vault.create(filePath, "");
-							await this.app.workspace.getLeaf(false).openFile(file);
+								const file = await this.app.vault.create(filePath, "");
+								await this.app.workspace.getLeaf(false).openFile(file);
+							};
+							createFile().catch(console.error);
 						});
 				});
 
@@ -653,18 +654,21 @@ class FileTreePreviewView extends ItemView {
 					menuItem
 						.setTitle("New folder")
 						.setIcon("folder")
-						.onClick(async () => {
-							const folderName = "New folder";
-							let folderPath = `${item.path}/${folderName}`;
-							let counter = 1;
+						.onClick(() => {
+							const createFolder = async () => {
+								const folderName = "New folder";
+								let folderPath = `${item.path}/${folderName}`;
+								let counter = 1;
 
-							// Handle naming conflicts
-							while (await this.app.vault.adapter.exists(folderPath)) {
-								folderPath = `${item.path}/New folder ${counter}`;
-								counter++;
-							}
+								// Handle naming conflicts
+								while (await this.app.vault.adapter.exists(folderPath)) {
+									folderPath = `${item.path}/New folder ${counter}`;
+									counter++;
+								}
 
-							await this.app.vault.createFolder(folderPath);
+								await this.app.vault.createFolder(folderPath);
+							};
+							createFolder().catch(console.error);
 						});
 				});
 
@@ -676,16 +680,19 @@ class FileTreePreviewView extends ItemView {
 						.setTitle("Rename")
 						.setIcon("pencil")
 						.onClick(() => {
-							new RenameModal(this.app, item.name, async (newName) => {
-								if (newName !== item.name) {
-									const parentPath = item.parent ? item.parent.path : "";
-									const newPath = parentPath ? `${parentPath}/${newName}` : newName;
-									try {
-										await this.app.vault.rename(item, newPath);
-									} catch (error) {
-										console.error("Failed to rename folder:", error);
+							new RenameModal(this.app, item.name, (newName) => {
+								const renameFolder = async () => {
+									if (newName !== item.name) {
+										const parentPath = item.parent ? item.parent.path : "";
+										const newPath = parentPath ? `${parentPath}/${newName}` : newName;
+										try {
+											await this.app.vault.rename(item, newPath);
+										} catch (error) {
+											console.error("Failed to rename folder:", error);
+										}
 									}
-								}
+								};
+								renameFolder().catch(console.error);
 							}).open();
 						});
 				});
@@ -696,13 +703,16 @@ class FileTreePreviewView extends ItemView {
 						.setTitle("Delete")
 						.setIcon("trash")
 						.onClick(() => {
-							new DeleteFolderModal(this.app, item.name, async () => {
-								try {
-									await this.app.fileManager.trashFile(item);
-								} catch (error) {
-									console.error("Failed to delete folder:", error);
-									new Notice("Failed to delete folder");
-								}
+							new DeleteFolderModal(this.app, item.name, () => {
+								const deleteFolder = async () => {
+									try {
+										await this.app.fileManager.trashFile(item);
+									} catch (error) {
+										console.error("Failed to delete folder:", error);
+										new Notice("Failed to delete folder");
+									}
+								};
+								deleteFolder().catch(console.error);
 							}).open();
 						});
 				});
@@ -718,7 +728,9 @@ class FileTreePreviewView extends ItemView {
 			folderHeader.addEventListener("dragover", (e) => {
 				e.preventDefault();
 				e.stopPropagation();
-				e.dataTransfer!.dropEffect = "move";
+				if (e.dataTransfer) {
+					e.dataTransfer.dropEffect = "move";
+				}
 				folderHeader.addClass("ftp-drop-target");
 			});
 
@@ -728,7 +740,7 @@ class FileTreePreviewView extends ItemView {
 				folderHeader.removeClass("ftp-drop-target");
 			});
 
-			folderHeader.addEventListener("drop", async (e) => {
+			folderHeader.addEventListener("drop", (e) => {
 				e.preventDefault();
 				e.stopPropagation();
 				folderHeader.removeClass("ftp-drop-target");
@@ -741,53 +753,57 @@ class FileTreePreviewView extends ItemView {
 
 				const isFolder = e.dataTransfer?.getData("application/x-obsidian-folder") === "true";
 
-				// Handle folder drops
-				if (isFolder && draggedItem instanceof TFolder) {
-					// Can't move folder into itself
-					if (draggedItem === item) {
-						new Notice("Cannot move a folder into itself");
-						return;
-					}
+				const handleDrop = async () => {
+					// Handle folder drops
+					if (isFolder && draggedItem instanceof TFolder) {
+						// Can't move folder into itself
+						if (draggedItem === item) {
+							new Notice("Cannot move a folder into itself");
+							return;
+						}
 
-					// Can't move folder into one of its descendants
-					if (this.isDescendantOf(item, draggedItem)) {
-						new Notice("Cannot move a folder into one of its subfolders");
-						return;
-					}
+						// Can't move folder into one of its descendants
+						if (this.isDescendantOf(item, draggedItem)) {
+							new Notice("Cannot move a folder into one of its subfolders");
+							return;
+						}
 
-					// Don't move if already in this folder
-					if (draggedItem.parent === item) {
-						new Notice("Folder is already in this location");
-						return;
-					}
+						// Don't move if already in this folder
+						if (draggedItem.parent === item) {
+							new Notice("Folder is already in this location");
+							return;
+						}
 
-					// Move the folder
-					const newPath = `${item.path}/${draggedItem.name}`;
-					try {
-						await this.app.vault.rename(draggedItem, newPath);
-						// Vault rename event will trigger re-render automatically
-					} catch (error) {
-						console.error("Failed to move folder:", error);
-						new Notice("Failed to move folder");
+						// Move the folder
+						const newPath = `${item.path}/${draggedItem.name}`;
+						try {
+							await this.app.vault.rename(draggedItem, newPath);
+							// Vault rename event will trigger re-render automatically
+						} catch (error) {
+							console.error("Failed to move folder:", error);
+							new Notice("Failed to move folder");
+						}
 					}
-				}
-				// Handle file drops
-				else if (draggedItem instanceof TFile) {
-					// Don't move if already in this folder
-					if (draggedItem.parent === item) {
-						return; // Silent for files as it's obvious
-					}
+					// Handle file drops
+					else if (draggedItem instanceof TFile) {
+						// Don't move if already in this folder
+						if (draggedItem.parent === item) {
+							return; // Silent for files as it's obvious
+						}
 
-					// Move the file
-					const newPath = `${item.path}/${draggedItem.name}`;
-					try {
-						await this.app.vault.rename(draggedItem, newPath);
-						// Vault rename event will trigger re-render automatically
-					} catch (error) {
-						console.error("Failed to move file:", error);
-						new Notice("Failed to move file");
+						// Move the file
+						const newPath = `${item.path}/${draggedItem.name}`;
+						try {
+							await this.app.vault.rename(draggedItem, newPath);
+							// Vault rename event will trigger re-render automatically
+						} catch (error) {
+							console.error("Failed to move file:", error);
+							new Notice("Failed to move file");
+						}
 					}
-				}
+				};
+
+				handleDrop().catch(console.error);
 			});
 
 			await this.renderFolder(item, folderContent, level + 1);
@@ -826,20 +842,26 @@ class FileTreePreviewView extends ItemView {
 			menu.addItem((item) => {
 				item.setTitle("Name (A to Z)")
 					.setChecked(this.plugin.data.sortOrder === "name-asc")
-					.onClick(async () => {
-						this.plugin.data.sortOrder = "name-asc";
-						await this.plugin.savePluginData();
-						await this.renderPreview();
+					.onClick(() => {
+						const updateSort = async () => {
+							this.plugin.data.sortOrder = "name-asc";
+							await this.plugin.savePluginData();
+							await this.renderPreview();
+						};
+						updateSort().catch(console.error);
 					});
 			});
 
 			menu.addItem((item) => {
 				item.setTitle("Name (Z to A)")
 					.setChecked(this.plugin.data.sortOrder === "name-desc")
-					.onClick(async () => {
-						this.plugin.data.sortOrder = "name-desc";
-						await this.plugin.savePluginData();
-						await this.renderPreview();
+					.onClick(() => {
+						const updateSort = async () => {
+							this.plugin.data.sortOrder = "name-desc";
+							await this.plugin.savePluginData();
+							await this.renderPreview();
+						};
+						updateSort().catch(console.error);
 					});
 			});
 
@@ -848,20 +870,26 @@ class FileTreePreviewView extends ItemView {
 			menu.addItem((item) => {
 				item.setTitle("Modified (newest first)")
 					.setChecked(this.plugin.data.sortOrder === "modified-new")
-					.onClick(async () => {
-						this.plugin.data.sortOrder = "modified-new";
-						await this.plugin.savePluginData();
-						await this.renderPreview();
+					.onClick(() => {
+						const updateSort = async () => {
+							this.plugin.data.sortOrder = "modified-new";
+							await this.plugin.savePluginData();
+							await this.renderPreview();
+						};
+						updateSort().catch(console.error);
 					});
 			});
 
 			menu.addItem((item) => {
 				item.setTitle("Modified (oldest first)")
 					.setChecked(this.plugin.data.sortOrder === "modified-old")
-					.onClick(async () => {
-						this.plugin.data.sortOrder = "modified-old";
-						await this.plugin.savePluginData();
-						await this.renderPreview();
+					.onClick(() => {
+						const updateSort = async () => {
+							this.plugin.data.sortOrder = "modified-old";
+							await this.plugin.savePluginData();
+							await this.renderPreview();
+						};
+						updateSort().catch(console.error);
 					});
 			});
 
@@ -870,20 +898,26 @@ class FileTreePreviewView extends ItemView {
 			menu.addItem((item) => {
 				item.setTitle("Created (newest first)")
 					.setChecked(this.plugin.data.sortOrder === "created-new")
-					.onClick(async () => {
-						this.plugin.data.sortOrder = "created-new";
-						await this.plugin.savePluginData();
-						await this.renderPreview();
+					.onClick(() => {
+						const updateSort = async () => {
+							this.plugin.data.sortOrder = "created-new";
+							await this.plugin.savePluginData();
+							await this.renderPreview();
+						};
+						updateSort().catch(console.error);
 					});
 			});
 
 			menu.addItem((item) => {
 				item.setTitle("Created (oldest first)")
 					.setChecked(this.plugin.data.sortOrder === "created-old")
-					.onClick(async () => {
-						this.plugin.data.sortOrder = "created-old";
-						await this.plugin.savePluginData();
-						await this.renderPreview();
+					.onClick(() => {
+						const updateSort = async () => {
+							this.plugin.data.sortOrder = "created-old";
+							await this.plugin.savePluginData();
+							await this.renderPreview();
+						};
+						updateSort().catch(console.error);
 					});
 			});
 
@@ -916,25 +950,28 @@ class FileTreePreviewView extends ItemView {
 		});
 		newFileButton.setText("+");
 
-		newFileButton.addEventListener("click", async () => {
+		newFileButton.addEventListener("click", () => {
 			if (this.selectedFolder) {
-				try {
-					const fileName = "Untitled.md";
-					let filePath = `${this.selectedFolder.path}/${fileName}`;
-					let counter = 1;
+				const createFile = async () => {
+					try {
+						const fileName = "Untitled.md";
+						let filePath = `${this.selectedFolder!.path}/${fileName}`;
+						let counter = 1;
 
-					// Handle naming conflicts
-					while (await this.app.vault.adapter.exists(filePath)) {
-						filePath = `${this.selectedFolder.path}/Untitled ${counter}.md`;
-						counter++;
+						// Handle naming conflicts
+						while (await this.app.vault.adapter.exists(filePath)) {
+							filePath = `${this.selectedFolder!.path}/Untitled ${counter}.md`;
+							counter++;
+						}
+
+						const file = await this.app.vault.create(filePath, "");
+						await this.app.workspace.getLeaf(false).openFile(file);
+					} catch (error) {
+						console.error("Error creating new file:", error);
+						new Notice("Failed to create new file");
 					}
-
-					const file = await this.app.vault.create(filePath, "");
-					await this.app.workspace.getLeaf(false).openFile(file);
-				} catch (error) {
-					console.error("Error creating new file:", error);
-					new Notice("Failed to create new file");
-				}
+				};
+				createFile().catch(console.error);
 			}
 		});
 
@@ -1014,7 +1051,7 @@ class FileTreePreviewView extends ItemView {
 			return {
 				type: 'placeholder',
 				icon: `<svg viewBox="0 0 100 100" class="ftp-file-icon"><rect x="20" y="10" width="50" height="70" rx="3" fill="none" stroke="currentColor" stroke-width="3" opacity="0.5"/><line x1="30" y1="30" x2="60" y2="30" stroke="currentColor" stroke-width="2" opacity="0.3"/><line x1="30" y1="45" x2="60" y2="45" stroke="currentColor" stroke-width="2" opacity="0.3"/><line x1="30" y1="60" x2="50" y2="60" stroke="currentColor" stroke-width="2" opacity="0.3"/></svg>`,
-				label: 'PDF Document'
+				label: 'PDF document'
 			};
 		}
 
@@ -1023,7 +1060,7 @@ class FileTreePreviewView extends ItemView {
 			return {
 				type: 'placeholder',
 				icon: `<svg viewBox="0 0 100 100" class="ftp-file-icon"><circle cx="35" cy="65" r="15" fill="none" stroke="currentColor" stroke-width="3" opacity="0.4"/><circle cx="65" cy="65" r="15" fill="none" stroke="currentColor" stroke-width="3" opacity="0.4"/><path d="M50,65 L50,25 L75,20 L75,60" stroke="currentColor" stroke-width="3" fill="none" opacity="0.5"/></svg>`,
-				label: 'Audio File'
+				label: 'Audio file'
 			};
 		}
 
@@ -1032,7 +1069,7 @@ class FileTreePreviewView extends ItemView {
 			return {
 				type: 'placeholder',
 				icon: `<svg viewBox="0 0 100 100" class="ftp-file-icon"><rect x="15" y="25" width="55" height="50" rx="3" fill="none" stroke="currentColor" stroke-width="3" opacity="0.4"/><polygon points="40,45 40,65 60,55" fill="currentColor" opacity="0.5"/></svg>`,
-				label: 'Video File'
+				label: 'Video file'
 			};
 		}
 
@@ -1052,24 +1089,23 @@ class FileTreePreviewView extends ItemView {
 		previewItem.setAttribute("draggable", "true");
 		previewItem.addEventListener("dragstart", (e) => {
 			e.dataTransfer?.setData("text/plain", file.path);
-			e.dataTransfer!.effectAllowed = "move";
+			if (e.dataTransfer) {
+				e.dataTransfer.effectAllowed = "move";
+			}
 
 			// Create custom drag ghost - just filename in a pill
 			this.dragGhost = document.body.createDiv({ cls: "ftp-drag-ghost" });
 			this.dragGhost.setText(file.basename);
 
-			// Position it visibly but out of normal flow
-			// The element needs to be rendered for setDragImage to work
-			this.dragGhost.style.position = "fixed";
-			this.dragGhost.style.left = "-9999px";
-			this.dragGhost.style.top = "0";
-
 			// Get the computed accent color and make it 50% transparent
-			// setDragImage doesn't respect opacity CSS, so we need to use rgba
 			const accentColor = getComputedStyle(document.body).getPropertyValue('--interactive-accent').trim();
-			// Convert hex to rgba with 0.5 opacity, or use a fallback
-			this.dragGhost.style.backgroundColor = `color-mix(in srgb, ${accentColor} 50%, transparent)`;
-			this.dragGhost.style.color = getComputedStyle(document.body).getPropertyValue('--text-on-accent').trim();
+			this.dragGhost.setCssProps({
+				position: "fixed",
+				left: "-9999px",
+				top: "0",
+				backgroundColor: `color-mix(in srgb, ${accentColor} 50%, transparent)`,
+				color: getComputedStyle(document.body).getPropertyValue('--text-on-accent').trim()
+			});
 
 			// Set the custom drag image (centered)
 			if (e.dataTransfer) {
@@ -1102,7 +1138,7 @@ class FileTreePreviewView extends ItemView {
 
 			// Apply same height as text preview
 			const lineCount = this.plugin.data.previewLines;
-			thumbnailContainer.style.height = `calc(1.4em * ${lineCount})`;
+			thumbnailContainer.setCssProps({ height: `calc(1.4em * ${lineCount})` });
 		} else if (fileTypeInfo?.type === 'placeholder') {
 			// Display placeholder for special files
 			const placeholderContainer = previewItem.createDiv({ cls: "ftp-preview-placeholder" });
@@ -1118,7 +1154,7 @@ class FileTreePreviewView extends ItemView {
 
 			// Apply same height as text preview
 			const lineCount = this.plugin.data.previewLines;
-			placeholderContainer.style.height = `calc(1.4em * ${lineCount})`;
+			placeholderContainer.setCssProps({ height: `calc(1.4em * ${lineCount})` });
 		} else {
 			// Read file content for text files
 			const content = await this.app.vault.read(file);
@@ -1132,17 +1168,22 @@ class FileTreePreviewView extends ItemView {
 
 			// Apply dynamic line count from settings
 			const lineCount = this.plugin.data.previewLines;
-			previewLines.style.setProperty('-webkit-line-clamp', lineCount.toString());
-			previewLines.style.height = `calc(1.4em * ${lineCount})`;
+			previewLines.setCssProps({
+				'-webkit-line-clamp': lineCount.toString(),
+				height: `calc(1.4em * ${lineCount})`
+			});
 		}
 
 		// Click to open
-		previewItem.addEventListener("click", async () => {
-			try {
-				await this.app.workspace.getLeaf(false).openFile(file);
-			} catch (error) {
-				console.error("Error opening file:", error);
-			}
+		previewItem.addEventListener("click", () => {
+			const openFile = async () => {
+				try {
+					await this.app.workspace.getLeaf(false).openFile(file);
+				} catch (error) {
+					console.error("Error opening file:", error);
+				}
+			};
+			openFile().catch(console.error);
 		});
 
 		// Right-click context menu for files
@@ -1155,22 +1196,25 @@ class FileTreePreviewView extends ItemView {
 				menuItem
 					.setTitle("New file")
 					.setIcon("document")
-					.onClick(async () => {
-						const parentFolder = file.parent;
-						if (!parentFolder) return;
+					.onClick(() => {
+						const createFile = async () => {
+							const parentFolder = file.parent;
+							if (!parentFolder) return;
 
-						const fileName = "Untitled.md";
-						let filePath = `${parentFolder.path}/${fileName}`;
-						let counter = 1;
+							const fileName = "Untitled.md";
+							let filePath = `${parentFolder.path}/${fileName}`;
+							let counter = 1;
 
-						// Handle naming conflicts
-						while (await this.app.vault.adapter.exists(filePath)) {
-							filePath = `${parentFolder.path}/Untitled ${counter}.md`;
-							counter++;
-						}
+							// Handle naming conflicts
+							while (await this.app.vault.adapter.exists(filePath)) {
+								filePath = `${parentFolder.path}/Untitled ${counter}.md`;
+								counter++;
+							}
 
-						const newFile = await this.app.vault.create(filePath, "");
-						await this.app.workspace.getLeaf(false).openFile(newFile);
+							const newFile = await this.app.vault.create(filePath, "");
+							await this.app.workspace.getLeaf(false).openFile(newFile);
+						};
+						createFile().catch(console.error);
 					});
 			});
 
@@ -1179,21 +1223,24 @@ class FileTreePreviewView extends ItemView {
 				menuItem
 					.setTitle("New folder")
 					.setIcon("folder")
-					.onClick(async () => {
-						const parentFolder = file.parent;
-						if (!parentFolder) return;
+					.onClick(() => {
+						const createFolder = async () => {
+							const parentFolder = file.parent;
+							if (!parentFolder) return;
 
-						const folderName = "New folder";
-						let folderPath = `${parentFolder.path}/${folderName}`;
-						let counter = 1;
+							const folderName = "New folder";
+							let folderPath = `${parentFolder.path}/${folderName}`;
+							let counter = 1;
 
-						// Handle naming conflicts
-						while (await this.app.vault.adapter.exists(folderPath)) {
-							folderPath = `${parentFolder.path}/New folder ${counter}`;
-							counter++;
-						}
+							// Handle naming conflicts
+							while (await this.app.vault.adapter.exists(folderPath)) {
+								folderPath = `${parentFolder.path}/New folder ${counter}`;
+								counter++;
+							}
 
-						await this.app.vault.createFolder(folderPath);
+							await this.app.vault.createFolder(folderPath);
+						};
+						createFolder().catch(console.error);
 					});
 			});
 
@@ -1205,16 +1252,19 @@ class FileTreePreviewView extends ItemView {
 					.setTitle("Rename")
 					.setIcon("pencil")
 					.onClick(() => {
-						new RenameModal(this.app, file.name, async (newName) => {
-							if (newName !== file.name) {
-								const parentPath = file.parent ? file.parent.path : "";
-								const newPath = parentPath ? `${parentPath}/${newName}` : newName;
-								try {
-									await this.app.vault.rename(file, newPath);
-								} catch (error) {
-									console.error("Failed to rename file:", error);
+						new RenameModal(this.app, file.name, (newName) => {
+							const renameFile = async () => {
+								if (newName !== file.name) {
+									const parentPath = file.parent ? file.parent.path : "";
+									const newPath = parentPath ? `${parentPath}/${newName}` : newName;
+									try {
+										await this.app.vault.rename(file, newPath);
+									} catch (error) {
+										console.error("Failed to rename file:", error);
+									}
 								}
-							}
+							};
+							renameFile().catch(console.error);
 						}).open();
 					});
 			});
@@ -1224,33 +1274,36 @@ class FileTreePreviewView extends ItemView {
 				menuItem
 					.setTitle("Duplicate")
 					.setIcon("copy")
-					.onClick(async () => {
-						const parentFolder = file.parent;
-						if (!parentFolder) return;
+					.onClick(() => {
+						const duplicateFile = async () => {
+							const parentFolder = file.parent;
+							if (!parentFolder) return;
 
-						// Read the original file content
-						const content = await this.app.vault.read(file);
+							// Read the original file content
+							const content = await this.app.vault.read(file);
 
-						// Create duplicate name
-						const baseName = file.basename;
-						const extension = file.extension;
-						let duplicateName = `${baseName} copy`;
-						let duplicatePath = `${parentFolder.path}/${duplicateName}.${extension}`;
-						let counter = 1;
+							// Create duplicate name
+							const baseName = file.basename;
+							const extension = file.extension;
+							let duplicateName = `${baseName} copy`;
+							let duplicatePath = `${parentFolder.path}/${duplicateName}.${extension}`;
+							let counter = 1;
 
-						// Handle naming conflicts
-						while (await this.app.vault.adapter.exists(duplicatePath)) {
-							duplicateName = `${baseName} copy ${counter}`;
-							duplicatePath = `${parentFolder.path}/${duplicateName}.${extension}`;
-							counter++;
-						}
+							// Handle naming conflicts
+							while (await this.app.vault.adapter.exists(duplicatePath)) {
+								duplicateName = `${baseName} copy ${counter}`;
+								duplicatePath = `${parentFolder.path}/${duplicateName}.${extension}`;
+								counter++;
+							}
 
-						// Create the duplicate file
-						const newFile = await this.app.vault.create(duplicatePath, content);
-						await this.app.workspace.getLeaf(false).openFile(newFile);
+							// Create the duplicate file
+							const newFile = await this.app.vault.create(duplicatePath, content);
+							await this.app.workspace.getLeaf(false).openFile(newFile);
 
-						// Refresh the preview panel to show the new file
-						this.renderPreview();
+							// Refresh the preview panel to show the new file
+							this.renderPreview().catch(console.error);
+						};
+						duplicateFile().catch(console.error);
 					});
 			});
 
@@ -1259,14 +1312,17 @@ class FileTreePreviewView extends ItemView {
 				menuItem
 					.setTitle("Delete")
 					.setIcon("trash")
-					.onClick(async () => {
-						try {
-							await this.app.fileManager.trashFile(file);
-							// Refresh the preview panel to remove the deleted file
-							this.renderPreview();
-						} catch (error) {
-							console.error("Failed to delete file:", error);
-						}
+					.onClick(() => {
+						const deleteFile = async () => {
+							try {
+								await this.app.fileManager.trashFile(file);
+								// Refresh the preview panel to remove the deleted file
+								this.renderPreview().catch(console.error);
+							} catch (error) {
+								console.error("Failed to delete file:", error);
+							}
+						};
+						deleteFile().catch(console.error);
 					});
 			});
 
@@ -1302,14 +1358,14 @@ class FileTreePreviewView extends ItemView {
 		text = text.replace(/^[\w-]+::.+$/gm, "");
 
 		// Remove table separator lines (lines with only pipes, dashes, spaces)
-		text = text.replace(/^\|?[\s\|\-:]+\|?\s*$/gm, "");
+		text = text.replace(/^\|?[\s|\-:]+\|?\s*$/gm, "");
 
 		// Clean up markdown formatting for preview
 		text = text
 			.replace(/^#+\s/gm, "") // Remove headers
 			.replace(/\*\*(.+?)\*\*/g, "$1") // Remove bold
 			.replace(/\*(.+?)\*/g, "$1") // Remove italic
-			.replace(/^[>\-\*\+]\s/gm, "") // Remove list markers and blockquotes
+			.replace(/^[>\-*+]\s/gm, "") // Remove list markers and blockquotes
 			.replace(/\|/g, " "); // Remove table pipes
 
 		// Conditionally remove link brackets based on settings
@@ -1346,10 +1402,9 @@ class RenameModal extends Modal {
 
 		const inputEl = contentEl.createEl("input", {
 			type: "text",
-			value: this.oldName
+			value: this.oldName,
+			cls: "ftp-rename-input"
 		});
-		inputEl.style.width = "100%";
-		inputEl.style.marginBottom = "10px";
 
 		// Select the text without extension if it's a file
 		const dotIndex = this.oldName.lastIndexOf('.');
@@ -1359,11 +1414,7 @@ class RenameModal extends Modal {
 			inputEl.select();
 		}
 
-		const buttonContainer = contentEl.createDiv();
-		buttonContainer.style.display = "flex";
-		buttonContainer.style.justifyContent = "flex-end";
-		buttonContainer.style.gap = "8px";
-		buttonContainer.style.marginTop = "10px";
+		const buttonContainer = contentEl.createDiv({ cls: "ftp-button-container" });
 
 		const cancelButton = buttonContainer.createEl("button", { text: "Cancel" });
 		cancelButton.addEventListener("click", () => this.close());
@@ -1407,29 +1458,21 @@ class DeleteFolderModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		contentEl.createEl("h3", { text: "Delete Folder" });
+		contentEl.createEl("h3", { text: "Delete folder" });
 
-		const warningEl = contentEl.createDiv();
-		warningEl.style.marginBottom = "15px";
-		warningEl.style.color = "var(--text-error)";
-		warningEl.style.fontWeight = "500";
+		const warningEl = contentEl.createDiv({ cls: "ftp-delete-warning" });
 
 		warningEl.createEl("p", {
 			text: `Are you sure you want to delete "${this.folderName}"?`
 		});
 
 		const detailEl = contentEl.createEl("p", {
-			text: "This will delete the folder and all of its contents (files and subfolders). This action cannot be undone."
+			text: "This will delete the folder and all of its contents (files and subfolders). This action cannot be undone.",
+			cls: "ftp-delete-detail"
 		});
-		detailEl.style.color = "var(--text-muted)";
-		detailEl.style.fontSize = "0.9em";
-		detailEl.style.marginTop = "8px";
 
-		const buttonContainer = contentEl.createDiv();
-		buttonContainer.style.display = "flex";
-		buttonContainer.style.justifyContent = "flex-end";
-		buttonContainer.style.gap = "8px";
-		buttonContainer.style.marginTop = "20px";
+		const buttonContainer = contentEl.createDiv({ cls: "ftp-button-container" });
+		buttonContainer.setCssProps({ marginTop: "20px" });
 
 		const cancelButton = buttonContainer.createEl("button", { text: "Cancel" });
 		cancelButton.addEventListener("click", () => this.close());
@@ -1463,7 +1506,7 @@ class FileTreePreviewSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		containerEl.createEl('h2', { text: 'File Tree Preview Settings' });
+		new Setting(containerEl).setHeading().setName('File Tree Preview settings');
 
 		new Setting(containerEl)
 			.setName('Active on launch')
@@ -1535,9 +1578,9 @@ class FileTreePreviewSettingTab extends PluginSettingTab {
 					this.plugin.data.folderIconStyle = value;
 					await this.plugin.savePluginData();
 					// Refresh all open views
-					this.app.workspace.getLeavesOfType(VIEW_TYPE_FILE_TREE_PREVIEW).forEach(async leaf => {
+					this.app.workspace.getLeavesOfType(VIEW_TYPE_FILE_TREE_PREVIEW).forEach(leaf => {
 						if (leaf.view instanceof FileTreePreviewView) {
-							await leaf.view.renderFileTree();
+							leaf.view.renderFileTree().catch(console.error);
 						}
 					});
 				}));
@@ -1555,7 +1598,7 @@ class FileTreePreviewSettingTab extends PluginSettingTab {
 					// Refresh all open views
 					this.app.workspace.getLeavesOfType(VIEW_TYPE_FILE_TREE_PREVIEW).forEach(leaf => {
 						if (leaf.view instanceof FileTreePreviewView) {
-							leaf.view.renderPreview();
+							leaf.view.renderPreview().catch(console.error);
 						}
 					});
 				}));
@@ -1571,32 +1614,24 @@ class FileTreePreviewSettingTab extends PluginSettingTab {
 					// Refresh all open views
 					this.app.workspace.getLeavesOfType(VIEW_TYPE_FILE_TREE_PREVIEW).forEach(leaf => {
 						if (leaf.view instanceof FileTreePreviewView) {
-							leaf.view.renderPreview();
+							leaf.view.renderPreview().catch(console.error);
 						}
 					});
 				}));
 
 		// Ko-fi donation link
 		const kofiContainer = containerEl.createDiv({ cls: 'ftp-kofi-container' });
-		kofiContainer.style.marginTop = '40px';
-		kofiContainer.style.textAlign = 'center';
-		kofiContainer.style.paddingTop = '20px';
-		kofiContainer.style.borderTop = '1px solid var(--background-modifier-border)';
 
 		const kofiText = kofiContainer.createEl('p', {
 			text: 'If you find this plugin helpful, consider ',
 			cls: 'ftp-kofi-text'
 		});
-		kofiText.style.color = 'var(--text-muted)';
-		kofiText.style.fontSize = '14px';
 
 		const kofiLink = kofiText.createEl('a', {
 			text: 'buying me a coffee',
-			href: 'https://ko-fi.com/J3J61ODQ3A'
+			href: 'https://ko-fi.com/J3J61ODQ3A',
+			cls: 'ftp-kofi-link'
 		});
-		kofiLink.style.color = '#72a4f2';
-		kofiLink.style.textDecoration = 'none';
-		kofiLink.style.fontWeight = '500';
 		kofiLink.setAttribute('target', '_blank');
 
 		kofiText.appendText(' ☕');

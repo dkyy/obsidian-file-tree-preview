@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.2] - 2024-11-14
+
+### Fixed
+- Complete compliance with all Obsidian plugin review requirements
+- Replaced all inline styles with CSS classes and setCssProps() for better theming
+- Fixed all Promise handling (added .catch() error handlers)
+- Removed unnecessary type assertions and 'any' types
+- Fixed async functions that had no await expressions
+- Removed unused imports and variables
+- All UI text now uses proper sentence case
+
 ## [1.0.1] - 2024-11-14
 
 ### Added
