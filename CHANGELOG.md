@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.7] - 2024-11-15
+
+### Fixed
+- Corrected sentence case: lowercase "wiki links" and "markdown links" (common nouns, not proper nouns)
+- Changed "buy me a coffee" to "buying me a coffee" for proper grammar
+
 ## [1.0.6] - 2024-11-15
 
 ### Fixed
