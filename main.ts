@@ -1604,7 +1604,7 @@ class FileTreePreviewSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Remove link brackets')
-			.setDesc('Remove brackets from wiki-links ([[link]]) and markdown links ([text](url)) in preview text')
+			.setDesc('Remove brackets from Wiki links ([[link]]) and Markdown links ([text](url)) in preview text')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.data.removeLinkBrackets)
 				.onChange(async (value) => {
@@ -1627,7 +1627,7 @@ class FileTreePreviewSettingTab extends PluginSettingTab {
 		});
 
 		const kofiLink = kofiText.createEl('a', {
-			text: 'buying me a coffee',
+			text: 'buy me a coffee',
 			href: 'https://ko-fi.com/J3J61ODQ3A',
 			cls: 'ftp-kofi-link'
 		});

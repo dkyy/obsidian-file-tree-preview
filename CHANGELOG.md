@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.6] - 2024-11-15
+
+### Fixed
+- Capitalized "Wiki links" and "Markdown links" in settings description
+- Changed "buying me a coffee" to "buy me a coffee" for correct grammar
+
 ## [1.0.5] - 2024-11-15
 
 ### Fixed
