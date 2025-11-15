@@ -1,6 +1,6 @@
 {
   "name": "file-tree-preview",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Navigate folders in a tree structure with preview cards showing file content snippets.",
   "main": "main.js",
   "scripts": {

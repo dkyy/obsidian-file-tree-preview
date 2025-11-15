@@ -341,7 +341,7 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
       const hasSubfolders = item.children.some((child) => child instanceof import_obsidian.TFolder);
       const isCollapsed = this.collapsedFolders.has(item.path);
       const folderEl = container.createDiv({ cls: "ftp-folder-item" });
-      folderEl.setCssProps({ paddingLeft: `calc(var(--ftp-folder-indent) * ${level})` });
+      folderEl.setCssProps({ "padding-left": `calc(var(--ftp-folder-indent) * ${level})` });
       const folderHeader = folderEl.createDiv({
         cls: "ftp-folder-header" + (isSelected ? " ftp-selected" : "")
       });

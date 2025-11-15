@@ -455,7 +455,7 @@ class FileTreePreviewView extends ItemView {
 			const isCollapsed = this.collapsedFolders.has(item.path);
 
 			const folderEl = container.createDiv({ cls: "ftp-folder-item" });
-			folderEl.setCssProps({ paddingLeft: `calc(var(--ftp-folder-indent) * ${level})` });
+			folderEl.setCssProps({ 'padding-left': `calc(var(--ftp-folder-indent) * ${level})` });
 
 			const folderHeader = folderEl.createDiv({
 				cls: "ftp-folder-header" + (isSelected ? " ftp-selected" : "")

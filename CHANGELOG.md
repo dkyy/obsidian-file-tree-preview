@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.4] - 2024-11-15
+
+### Fixed
+- Fixed folder indentation on iOS/iPadOS by using correct CSS property format ('padding-left' instead of paddingLeft)
+
 ## [1.0.3] - 2024-11-15
 
 ### Fixed
