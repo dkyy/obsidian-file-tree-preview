@@ -208,3 +208,4 @@ Advanced styling can be customized with CSS snippets. Available CSS variables:
 ```
 
 To customize, create a CSS snippet in `.obsidian/snippets/` and override these variables.
+
