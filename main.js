@@ -39,7 +39,8 @@ var DEFAULT_DATA = {
   compactMode: false,
   useAccentColor: true,
   showHoverEffect: false,
-  folderIconStyle: "custom"
+  folderIconStyle: "custom",
+  showRootFolder: true
 };
 var FileTreePreviewPlugin = class extends import_obsidian.Plugin {
   async onload() {
@@ -328,10 +329,90 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
     try {
       this.treeContainer.empty();
       const root = this.app.vault.getRoot();
-      await this.renderFolder(root, this.treeContainer, 0);
+      if (this.plugin.data.showRootFolder) {
+        await this.renderRootFolder(root, this.treeContainer);
+      } else {
+        await this.renderFolder(root, this.treeContainer, 0);
+      }
     } finally {
       this.isRenderingTree = false;
     }
+  }
+  async renderRootFolder(root, container) {
+    var _a, _b, _c;
+    const folderEl = container.createDiv({ cls: "ftp-folder-item ftp-root-folder" });
+    folderEl.setCssProps({ "padding-left": "0px" });
+    const isSelected = this.selectedFolder === root;
+    const folderHeader = folderEl.createDiv({
+      cls: "ftp-folder-header" + (isSelected ? " ftp-selected" : "")
+    });
+    const caret = folderHeader.createSpan({ cls: "ftp-folder-caret" });
+    (0, import_obsidian.setIcon)(caret, "right-triangle");
+    const iconStyle = this.plugin.data.folderIconStyle;
+    const folderNameSpan = folderHeader.createSpan({ cls: "ftp-folder-name" });
+    if (iconStyle === "none") {
+      folderNameSpan.setText(this.app.vault.getName());
+    } else if (iconStyle === "custom") {
+      try {
+        const iconFolderPlugin = (_b = (_a = this.app.plugins) == null ? void 0 : _a.plugins) == null ? void 0 : _b["obsidian-icon-folder"];
+        if ((_c = iconFolderPlugin == null ? void 0 : iconFolderPlugin.api) == null ? void 0 : _c.getIconByName) {
+          const iconData = iconFolderPlugin.api.getIconByName("LiVault");
+          if (iconData && iconData.svgElement) {
+            const iconContainer = folderNameSpan.createSpan({ cls: "ftp-icon-container" });
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(iconData.svgElement, "image/svg+xml");
+            const svgEl = doc.documentElement;
+            if (svgEl && !svgEl.querySelector("parsererror")) {
+              iconContainer.appendChild(svgEl);
+            }
+            folderNameSpan.appendText(" " + this.app.vault.getName());
+          } else {
+            const fallbackIcon = iconFolderPlugin.api.getIconByName("LiFolders");
+            if (fallbackIcon && fallbackIcon.svgElement) {
+              const iconContainer = folderNameSpan.createSpan({ cls: "ftp-icon-container" });
+              const parser = new DOMParser();
+              const doc = parser.parseFromString(fallbackIcon.svgElement, "image/svg+xml");
+              const svgEl = doc.documentElement;
+              if (svgEl && !svgEl.querySelector("parsererror")) {
+                iconContainer.appendChild(svgEl);
+              }
+              folderNameSpan.appendText(" " + this.app.vault.getName());
+            } else {
+              folderNameSpan.setText(this.app.vault.getName());
+            }
+          }
+        } else {
+          folderNameSpan.setText(this.app.vault.getName());
+        }
+      } catch (error) {
+        console.error("Error rendering vault icon:", error);
+        folderNameSpan.setText(this.app.vault.getName());
+      }
+    } else if (iconStyle === "folder") {
+      folderNameSpan.setText("\u{1F4C1} " + this.app.vault.getName());
+    }
+    folderHeader.addEventListener("click", async () => {
+      this.selectedFolder = root;
+      await Promise.all([
+        this.renderFileTree(),
+        this.renderPreview()
+      ]).catch(console.error);
+    });
+    caret.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const willBeCollapsed = !folderContent.hasClass("ftp-collapsed");
+      folderContent.toggleClass("ftp-collapsed", willBeCollapsed);
+      caret.toggleClass("ftp-collapsed", willBeCollapsed);
+      if (willBeCollapsed) {
+        this.collapsedFolders.add(root.path);
+      } else {
+        this.collapsedFolders.delete(root.path);
+      }
+      this.plugin.data.collapsedFolders = Array.from(this.collapsedFolders);
+      this.plugin.savePluginData().catch(console.error);
+    });
+    const folderContent = folderEl.createDiv({ cls: "ftp-folder-content" });
+    await this.renderFolder(root, folderContent, 1);
   }
   async renderFolder(folder, container, level) {
     var _a, _b, _c;
@@ -607,7 +688,8 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
       return;
     }
     const headerLeft = this.previewHeader.createDiv({ cls: "ftp-preview-header-left" });
-    headerLeft.setText(this.selectedFolder.name);
+    const displayName = this.selectedFolder.path === "/" ? this.app.vault.getName() : this.selectedFolder.name;
+    headerLeft.setText(displayName);
     const headerRight = this.previewHeader.createDiv({ cls: "ftp-preview-header-right" });
     const sortButton = headerRight.createEl("button", {
       cls: "ftp-header-button",
@@ -1123,6 +1205,15 @@ var FileTreePreviewSettingTab = class extends import_obsidian.PluginSettingTab {
     }));
     new import_obsidian.Setting(containerEl).setName("Folder icons").setDesc("Choose how to display folder icons in the folder tree").addDropdown((dropdown) => dropdown.addOption("none", "No icons").addOption("custom", "Custom icons").addOption("folder", "Folder emoji (\u{1F4C1})").setValue(this.plugin.data.folderIconStyle).onChange(async (value) => {
       this.plugin.data.folderIconStyle = value;
+      await this.plugin.savePluginData();
+      this.app.workspace.getLeavesOfType(VIEW_TYPE_FILE_TREE_PREVIEW).forEach((leaf) => {
+        if (leaf.view instanceof FileTreePreviewView) {
+          leaf.view.renderFileTree().catch(console.error);
+        }
+      });
+    }));
+    new import_obsidian.Setting(containerEl).setName("Show root folder").setDesc("Display the vault name as a root folder containing all other folders").addToggle((toggle) => toggle.setValue(this.plugin.data.showRootFolder).onChange(async (value) => {
+      this.plugin.data.showRootFolder = value;
       await this.plugin.savePluginData();
       this.app.workspace.getLeavesOfType(VIEW_TYPE_FILE_TREE_PREVIEW).forEach((leaf) => {
         if (leaf.view instanceof FileTreePreviewView) {

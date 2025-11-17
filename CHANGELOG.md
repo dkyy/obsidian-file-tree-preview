@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.1.0] - 2024-11-17
+
+### Added
+- Show root folder setting: Display the vault name as a root folder containing all other folders
+  - Root folder is open by default
+  - Clicking the root folder shows files at the vault root level
+  - Uses vault icon (or folders icon as fallback) in custom icon mode
+  - Slightly more prominent styling to distinguish from regular folders
+  - Toggle on/off via settings
+
 ## [1.0.8] - 2024-11-15
 
 ### Fixed

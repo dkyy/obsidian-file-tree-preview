@@ -163,6 +163,17 @@
     margin: 2px 0;
 }
 
+/* Root folder - slightly more prominent */
+.ftp-root-folder {
+    margin: 0 0 8px 0;
+}
+
+.ftp-root-folder > .ftp-folder-header {
+    font-weight: 500;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+}
+
 .ftp-folder-header {
     padding: 4px 8px;
     cursor: pointer;
