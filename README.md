@@ -167,43 +167,43 @@ Advanced styling can be customized with CSS snippets. Available CSS variables:
 ```css
 :root {
     /* Font Sizes */
-    --ftp-folder-font-size: 14px;
-    --ftp-folder-icon-size: 14px;
-    --ftp-preview-filename-font-size: 14px;
-    --ftp-preview-text-font-size: 14px;
-    --ftp-header-font-size: 14px;
-    --ftp-button-font-size: 16px;
-    --ftp-placeholder-font-size: 12px;
+    --ftpreview-folder-font-size: 14px;
+    --ftpreview-folder-icon-size: 14px;
+    --ftpreview-preview-filename-font-size: 14px;
+    --ftpreview-preview-text-font-size: 14px;
+    --ftpreview-header-font-size: 14px;
+    --ftpreview-button-font-size: 16px;
+    --ftpreview-placeholder-font-size: 12px;
 
     /* Spacing */
-    --ftp-preview-card-padding-vertical: 12px;
-    --ftp-preview-card-padding-horizontal: 12px;
-    --ftp-folder-indent: 20px;
-    --ftp-folder-item-gap: 4px;
-    --ftp-header-button-gap: 2px;
-    --ftp-preview-card-border-width: 2px;
-    --ftp-preview-card-border-radius: 6px;
+    --ftpreview-preview-card-padding-vertical: 12px;
+    --ftpreview-preview-card-padding-horizontal: 12px;
+    --ftpreview-folder-indent: 20px;
+    --ftpreview-folder-item-gap: 4px;
+    --ftpreview-header-button-gap: 2px;
+    --ftpreview-preview-card-border-width: 2px;
+    --ftpreview-preview-card-border-radius: 6px;
 
     /* Background Colors (unset = inherit from theme) */
-    --ftp-tree-column-background: unset;
-    --ftp-preview-column-background: unset;
-    --ftp-selected-folder-background: var(--background-modifier-border);
+    --ftpreview-tree-column-background: unset;
+    --ftpreview-preview-column-background: unset;
+    --ftpreview-selected-folder-background: var(--background-modifier-border);
 
     /* Text Colors (unset = inherit from theme) */
-    --ftp-folder-text-color: unset;
-    --ftp-selected-folder-text-color: unset;
-    --ftp-preview-card-border-color: var(--background-modifier-border);
+    --ftpreview-folder-text-color: unset;
+    --ftpreview-selected-folder-text-color: unset;
+    --ftpreview-preview-card-border-color: var(--background-modifier-border);
 
     /* Typography */
-    --ftp-folder-font-weight: normal;
-    --ftp-selected-folder-font-weight: 500;
-    --ftp-preview-filename-font-weight: bold;
-    --ftp-preview-text-line-height: 1.4;
-    --ftp-folder-line-height: inherit;
+    --ftpreview-folder-font-weight: normal;
+    --ftpreview-selected-folder-font-weight: 500;
+    --ftpreview-preview-filename-font-weight: bold;
+    --ftpreview-preview-text-line-height: 1.4;
+    --ftpreview-folder-line-height: inherit;
 
     /* Scrollbar */
-    --ftp-scrollbar-width: 6px;
-    --ftp-scrollbar-color: var(--background-modifier-border);
+    --ftpreview-scrollbar-width: 6px;
+    --ftpreview-scrollbar-color: var(--background-modifier-border);
 }
 ```
 

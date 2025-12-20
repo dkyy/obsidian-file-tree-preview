@@ -1,43 +1,44 @@
 /* CSS Variables */
 :root {
     /* Font Sizes */
-    --ftp-folder-font-size: 14px;
-    --ftp-folder-icon-size: 14px;
-    --ftp-preview-filename-font-size: 14px;
-    --ftp-preview-text-font-size: 14px;
-    --ftp-header-font-size: 14px;
-    --ftp-button-font-size: 16px;
-    --ftp-placeholder-font-size: 12px;
+    --ftpreview-folder-font-size: 14px;
+    --ftpreview-folder-icon-size: 14px;
+    --ftpreview-preview-filename-font-size: 14px;
+    --ftpreview-preview-text-font-size: 14px;
+    --ftpreview-header-font-size: 14px;
+    --ftpreview-button-font-size: 16px;
+    --ftpreview-placeholder-font-size: 12px;
 
     /* Spacing */
-    --ftp-preview-card-padding-vertical: 12px;
-    --ftp-preview-card-padding-horizontal: 12px;
-    --ftp-folder-indent: 20px;
-    --ftp-folder-item-gap: 4px;
-    --ftp-header-button-gap: 2px;
-    --ftp-preview-card-border-width: 2px;
-    --ftp-preview-card-border-radius: 6px;
+    --ftpreview-preview-card-padding-vertical: 12px;
+    --ftpreview-preview-card-padding-horizontal: 12px;
+    --ftpreview-folder-indent: 20px;
+    --ftpreview-folder-item-gap: 4px;
+    --ftpreview-header-button-gap: 2px;
+    --ftpreview-preview-card-border-width: 2px;
+    --ftpreview-preview-card-border-radius: 6px;
+    --ftpreview-folder-border-radius: 6px;
 
     /* Background Colors - leave unset to inherit from theme */
-    --ftp-tree-column-background: unset;
-    --ftp-preview-column-background: unset;
-    --ftp-selected-folder-background: var(--background-modifier-border);
+    --ftpreview-tree-column-background: unset;
+    --ftpreview-preview-column-background: unset;
+    --ftpreview-selected-folder-background: var(--background-modifier-border);
 
     /* Text Colors - leave unset to inherit from theme */
-    --ftp-folder-text-color: unset;
-    --ftp-selected-folder-text-color: unset;
-    --ftp-preview-card-border-color: var(--background-modifier-border);
+    --ftpreview-folder-text-color: unset;
+    --ftpreview-selected-folder-text-color: unset;
+    --ftpreview-preview-card-border-color: var(--background-modifier-border);
 
     /* Typography */
-    --ftp-folder-font-weight: normal;
-    --ftp-selected-folder-font-weight: 500;
-    --ftp-preview-filename-font-weight: bold;
-    --ftp-preview-text-line-height: 1.4;
-    --ftp-folder-line-height: inherit;
+    --ftpreview-folder-font-weight: normal;
+    --ftpreview-selected-folder-font-weight: 500;
+    --ftpreview-preview-filename-font-weight: bold;
+    --ftpreview-preview-text-line-height: 1.4;
+    --ftpreview-folder-line-height: inherit;
 
     /* Scrollbar */
-    --ftp-scrollbar-width: 6px;
-    --ftp-scrollbar-color: var(--background-modifier-border);
+    --ftpreview-scrollbar-width: 6px;
+    --ftpreview-scrollbar-color: var(--background-modifier-border);
 }
 
 /* Main container */
@@ -49,30 +50,30 @@
     margin: 0 !important;
 }
 
-.ftp-main-layout {
+.ftpreview-main-layout {
     display: flex;
     height: 100%;
     width: 100%;
 }
 
 /* File Tree Column (Left) */
-.ftp-tree-column {
+.ftpreview-tree-column {
     flex: 0 0 auto;
     min-width: 150px;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 8px 0 0 0;
-    background-color: var(--ftp-tree-column-background);
+    padding: 8px 8px 0 8px;
+    background-color: var(--ftpreview-tree-column-background);
 }
 
 /* For touch devices: equal width columns */
-.ftp-tree-column.ftp-touch-equal {
+.ftpreview-tree-column.ftpreview-touch-equal {
     flex: 1;
     width: auto;
 }
 
 /* Resize Handle */
-.ftp-resize-handle {
+.ftpreview-resize-handle {
     flex: 0 0 4px;
     cursor: col-resize;
     background-color: transparent;
@@ -80,26 +81,26 @@
 }
 
 /* Hide resize handle when needed */
-.ftp-resize-handle.ftp-hidden {
+.ftpreview-resize-handle.ftpreview-hidden {
     display: none;
 }
 
 /* Preview Column (Right) */
-.ftp-preview-column {
+.ftpreview-preview-column {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background-color: var(--ftp-preview-column-background, var(--background-secondary));
+    background-color: var(--ftpreview-preview-column-background, var(--background-secondary));
     min-width: 0;
 }
 
-.ftp-preview-header {
+.ftpreview-preview-header {
     padding: 0 8px 16px 8px;
-    font-size: var(--ftp-header-font-size);
+    font-size: var(--ftpreview-header-font-size);
     font-weight: bold;
     border-bottom: 1px solid var(--background-modifier-border);
-    background-color: var(--ftp-preview-column-background, var(--background-secondary));
+    background-color: var(--ftpreview-preview-column-background, var(--background-secondary));
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -107,51 +108,51 @@
     gap: 16px;
 }
 
-.ftp-preview-header-left {
+.ftpreview-preview-header-left {
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.ftp-preview-header-right {
+.ftpreview-preview-header-right {
     display: flex;
-    gap: var(--ftp-header-button-gap);
+    gap: var(--ftpreview-header-button-gap);
     flex-shrink: 0;
 }
 
-.ftp-header-button {
+.ftpreview-header-button {
     background-color: transparent !important;
     border: none !important;
     box-shadow: none !important;
     outline: none !important;
     border-radius: 4px;
     padding: 4px 8px;
-    font-size: var(--ftp-button-font-size);
+    font-size: var(--ftpreview-button-font-size);
     cursor: pointer;
     color: var(--text-normal);
     transition: background-color 0.1s ease;
 }
 
-.ftp-header-button:hover {
+.ftpreview-header-button:hover {
     background-color: var(--background-modifier-hover) !important;
     border: none !important;
     box-shadow: none !important;
 }
 
-.ftp-header-button:focus {
+.ftpreview-header-button:focus {
     outline: none !important;
     box-shadow: none !important;
     border: none !important;
 }
 
-.ftp-header-button:active {
+.ftpreview-header-button:active {
     outline: none !important;
     box-shadow: none !important;
     border: none !important;
 }
 
-.ftp-preview-content {
+.ftpreview-preview-content {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
@@ -159,47 +160,53 @@
 }
 
 /* Folder items */
-.ftp-folder-item {
+.ftpreview-folder-item {
     margin: 2px 0;
 }
 
 /* Root folder - slightly more prominent */
-.ftp-root-folder {
+.ftpreview-root-folder {
     margin: 0 0 8px 0;
 }
 
-.ftp-root-folder > .ftp-folder-header {
+.ftpreview-root-folder > .ftpreview-folder-header {
     font-weight: 500;
     padding: 6px 8px;
     margin-bottom: 4px;
 }
 
-.ftp-folder-header {
+.ftpreview-folder-header {
     padding: 4px 8px;
     cursor: pointer;
-    border-radius: 6px;
-    font-size: var(--ftp-folder-font-size);
-    font-weight: var(--ftp-folder-font-weight);
-    line-height: var(--ftp-folder-line-height);
-    color: var(--ftp-folder-text-color);
+    border-radius: var(--ftpreview-folder-border-radius);
+    font-size: var(--ftpreview-folder-font-size);
+    font-weight: var(--ftpreview-folder-font-weight);
+    line-height: var(--ftpreview-folder-line-height);
+    color: var(--ftpreview-folder-text-color);
     user-select: none;
     display: flex;
     align-items: center;
-    gap: var(--ftp-folder-item-gap);
+    gap: var(--ftpreview-folder-item-gap);
 }
 
 /* Hover effect - only when enabled */
-.ftp-show-hover .ftp-folder-header:hover {
+.ftpreview-show-hover .ftpreview-folder-header:hover {
     background-color: var(--background-modifier-hover);
 }
 
-.ftp-folder-header.ftp-selected {
-    background-color: var(--ftp-selected-folder-background);
-    font-weight: var(--ftp-selected-folder-font-weight);
-    color: var(--ftp-selected-folder-text-color);
+.ftpreview-folder-header.ftpreview-selected {
+    background-color: var(--ftpreview-selected-folder-background);
+    font-weight: var(--ftpreview-selected-folder-font-weight);
+    color: var(--ftpreview-selected-folder-text-color);
 }
 
-.ftp-folder-caret {
+.ftpreview-folder-header.ftpreview-selected .ftpreview-folder-name,
+.ftpreview-folder-header.ftpreview-selected .ftpreview-folder-caret,
+.ftpreview-folder-header.ftpreview-selected .ftpreview-icon-container {
+    color: var(--ftpreview-selected-folder-text-color, var(--interactive-accent)) !important;
+}
+
+.ftpreview-folder-caret {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -211,27 +218,27 @@
     flex-shrink: 0;
 }
 
-.ftp-folder-caret svg {
+.ftpreview-folder-caret svg {
     width: 12px;
     height: 12px;
 }
 
-.ftp-folder-caret.ftp-collapsed {
+.ftpreview-folder-caret.ftpreview-collapsed {
     transform: rotate(-90deg);
 }
 
 /* Hover effect removed */
-/* .ftp-folder-caret:hover {
+/* .ftpreview-folder-caret:hover {
     color: var(--text-normal);
 } */
 
-.ftp-folder-caret-spacer {
+.ftpreview-folder-caret-spacer {
     display: inline-block;
     width: 12px;
     flex-shrink: 0;
 }
 
-.ftp-folder-name {
+.ftpreview-folder-name {
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -241,28 +248,28 @@
     gap: 4px;
 }
 
-.ftp-icon-container {
+.ftpreview-icon-container {
     display: inline-flex;
     align-items: center;
     flex-shrink: 0;
 }
 
-.ftp-icon-container svg {
-    width: var(--ftp-folder-icon-size);
-    height: var(--ftp-folder-icon-size);
+.ftpreview-icon-container svg {
+    width: var(--ftpreview-folder-icon-size);
+    height: var(--ftpreview-folder-icon-size);
 }
 
-.ftp-folder-content {
+.ftpreview-folder-content {
     overflow: hidden;
     transition: max-height 0.2s ease;
 }
 
-.ftp-folder-content.ftp-collapsed {
+.ftpreview-folder-content.ftpreview-collapsed {
     display: none;
 }
 
 /* Preview panel */
-.ftp-no-selection {
+.ftpreview-no-selection {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -271,114 +278,114 @@
     font-style: italic;
 }
 
-.ftp-preview-item {
-    padding: var(--ftp-preview-card-padding-vertical) var(--ftp-preview-card-padding-horizontal);
+.ftpreview-preview-item {
+    padding: var(--ftpreview-preview-card-padding-vertical) var(--ftpreview-preview-card-padding-horizontal);
     cursor: pointer;
     transition: background-color 0.15s ease;
-    border-bottom: var(--ftp-preview-card-border-width) solid var(--ftp-preview-card-border-color);
-    border-radius: var(--ftp-preview-card-border-radius);
+    border-bottom: var(--ftpreview-preview-card-border-width) solid var(--ftpreview-preview-card-border-color);
+    border-radius: var(--ftpreview-preview-card-border-radius);
 }
 
-.ftp-preview-item:last-child {
+.ftpreview-preview-item:last-child {
     border-bottom: none;
 }
 
 /* Hover effect - only when enabled */
-.ftp-show-hover .ftp-preview-item:hover {
+.ftpreview-show-hover .ftpreview-preview-item:hover {
     background-color: var(--background-modifier-hover);
 }
 
 /* Don't show hover on active items */
-.ftp-show-hover .ftp-preview-item-active:hover {
+.ftpreview-show-hover .ftpreview-preview-item-active:hover {
     background-color: var(--interactive-accent);
 }
 
-.ftp-show-hover .ftp-neutral-highlight .ftp-preview-item-active:hover {
+.ftpreview-show-hover .ftpreview-neutral-highlight .ftpreview-preview-item-active:hover {
     background-color: var(--background-modifier-border);
 }
 
-.ftp-preview-item-active {
+.ftpreview-preview-item-active {
     /* Highlight currently open file - accent color by default */
     background-color: var(--interactive-accent);
     color: var(--text-on-accent);
 }
 
-.ftp-preview-item-active .ftp-preview-filename,
-.ftp-preview-item-active .ftp-preview-filename strong,
-.ftp-preview-item-active .ftp-preview-lines,
-.ftp-preview-item-active .ftp-placeholder-label {
+.ftpreview-preview-item-active .ftpreview-preview-filename,
+.ftpreview-preview-item-active .ftpreview-preview-filename strong,
+.ftpreview-preview-item-active .ftpreview-preview-lines,
+.ftpreview-preview-item-active .ftpreview-placeholder-label {
     color: var(--text-on-accent);
 }
 
 /* Neutral highlight mode */
-.ftp-neutral-highlight .ftp-preview-item-active {
+.ftpreview-neutral-highlight .ftpreview-preview-item-active {
     background-color: var(--background-modifier-border);
     color: var(--text-normal);
 }
 
-.ftp-neutral-highlight .ftp-preview-item-active .ftp-preview-filename,
-.ftp-neutral-highlight .ftp-preview-item-active .ftp-preview-filename strong,
-.ftp-neutral-highlight .ftp-preview-item-active .ftp-preview-lines,
-.ftp-neutral-highlight .ftp-preview-item-active .ftp-placeholder-label {
+.ftpreview-neutral-highlight .ftpreview-preview-item-active .ftpreview-preview-filename,
+.ftpreview-neutral-highlight .ftpreview-preview-item-active .ftpreview-preview-filename strong,
+.ftpreview-neutral-highlight .ftpreview-preview-item-active .ftpreview-preview-lines,
+.ftpreview-neutral-highlight .ftpreview-preview-item-active .ftpreview-placeholder-label {
     color: var(--text-normal);
 }
 
-.ftp-neutral-highlight .ftp-preview-item-active .ftp-preview-lines,
-.ftp-neutral-highlight .ftp-preview-item-active .ftp-placeholder-label {
+.ftpreview-neutral-highlight .ftpreview-preview-item-active .ftpreview-preview-lines,
+.ftpreview-neutral-highlight .ftpreview-preview-item-active .ftpreview-placeholder-label {
     color: var(--text-muted);
 }
 
-.ftp-preview-filename {
+.ftpreview-preview-filename {
     margin-bottom: 2px;
-    font-size: var(--ftp-preview-filename-font-size);
-    line-height: var(--ftp-preview-text-line-height);
-    height: calc(var(--ftp-preview-text-line-height) * 1em);
+    font-size: var(--ftpreview-preview-filename-font-size);
+    line-height: var(--ftpreview-preview-text-line-height);
+    height: calc(var(--ftpreview-preview-text-line-height) * 1em);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-weight: var(--ftp-preview-filename-font-weight);
+    font-weight: var(--ftpreview-preview-filename-font-weight);
 }
 
 /* Collapsed previews - hide preview text and thumbnails */
-.ftp-previews-collapsed .ftp-preview-lines,
-.ftp-previews-collapsed .ftp-preview-thumbnail,
-.ftp-previews-collapsed .ftp-preview-placeholder {
+.ftpreview-previews-collapsed .ftpreview-preview-lines,
+.ftpreview-previews-collapsed .ftpreview-preview-thumbnail,
+.ftpreview-previews-collapsed .ftpreview-preview-placeholder {
     display: none;
 }
 
-.ftp-previews-collapsed .ftp-preview-filename {
+.ftpreview-previews-collapsed .ftpreview-preview-filename {
     margin-bottom: 0;
 }
 
-.ftp-previews-collapsed .ftp-preview-item {
-    padding: 4px var(--ftp-preview-card-padding-horizontal);
+.ftpreview-previews-collapsed .ftpreview-preview-item {
+    padding: 4px var(--ftpreview-preview-card-padding-horizontal);
     border-bottom: none;
 }
 
 /* Collapsed previews in compact mode */
-.ftp-compact.ftp-previews-collapsed .ftp-preview-item,
-.ftp-compact .ftp-previews-collapsed .ftp-preview-item {
-    padding: 2px calc(var(--ftp-preview-card-padding-horizontal) * 0.67);
+.ftpreview-compact.ftpreview-previews-collapsed .ftpreview-preview-item,
+.ftpreview-compact .ftpreview-previews-collapsed .ftpreview-preview-item {
+    padding: 2px calc(var(--ftpreview-preview-card-padding-horizontal) * 0.67);
     border-bottom: none;
 }
 
-.ftp-preview-filename strong {
+.ftpreview-preview-filename strong {
     color: var(--text-normal);
     font-weight: bold;
 }
 
-.ftp-preview-lines {
-    font-size: var(--ftp-preview-text-font-size);
-    line-height: var(--ftp-preview-text-line-height);
+.ftpreview-preview-lines {
+    font-size: var(--ftpreview-preview-text-font-size);
+    line-height: var(--ftpreview-preview-text-line-height);
     color: var(--text-muted);
     overflow: hidden;
     display: -webkit-box;
     -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
-    height: calc(var(--ftp-preview-text-line-height) * 4em);
+    height: calc(var(--ftpreview-preview-text-line-height) * 4em);
 }
 
-.ftp-preview-thumbnail {
+.ftpreview-preview-thumbnail {
     margin-top: 2px;
     display: flex;
     justify-content: flex-start;
@@ -387,14 +394,14 @@
     overflow: hidden;
 }
 
-.ftp-preview-thumbnail img {
+.ftpreview-preview-thumbnail img {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
     border-radius: 4px;
 }
 
-.ftp-preview-placeholder {
+.ftpreview-preview-placeholder {
     margin-top: 2px;
     display: flex;
     flex-direction: column;
@@ -404,115 +411,115 @@
     gap: 8px;
 }
 
-.ftp-placeholder-icon {
+.ftpreview-placeholder-icon {
     display: flex;
     align-items: center;
     opacity: 0.5;
 }
 
-.ftp-file-icon {
+.ftpreview-file-icon {
     width: 48px;
     height: 48px;
     color: var(--text-muted);
 }
 
-.ftp-placeholder-label {
-    font-size: var(--ftp-placeholder-font-size);
+.ftpreview-placeholder-label {
+    font-size: var(--ftpreview-placeholder-font-size);
     color: var(--text-muted);
     font-style: italic;
 }
 
 /* Scrollbar styling - consistent thin width */
-.ftp-tree-column,
-.ftp-preview-content {
+.ftpreview-tree-column,
+.ftpreview-preview-content {
     scrollbar-width: thin !important;
     scrollbar-color: transparent transparent !important;
 }
 
-.ftp-tree-column:hover,
-.ftp-preview-content:hover {
-    scrollbar-color: var(--ftp-scrollbar-color) transparent !important;
+.ftpreview-tree-column:hover,
+.ftpreview-preview-content:hover {
+    scrollbar-color: var(--ftpreview-scrollbar-color) transparent !important;
 }
 
 /* Compact mode - reduced spacing */
-.ftp-compact .ftp-tree-column {
-    padding: 4px 0 0 0;
+.ftpreview-compact .ftpreview-tree-column {
+    padding: 4px 8px 0 8px;
 }
 
-.ftp-compact .ftp-folder-item {
+.ftpreview-compact .ftpreview-folder-item {
     margin: 0;
 }
 
-.ftp-compact .ftp-folder-header {
+.ftpreview-compact .ftpreview-folder-header {
     padding: 2px 8px;
 }
 
-.ftp-compact .ftp-preview-header {
+.ftpreview-compact .ftpreview-preview-header {
     padding: 0 8px 8px 8px;
 }
 
-.ftp-compact .ftp-preview-content {
+.ftpreview-compact .ftpreview-preview-content {
     padding: 0 8px 0 8px;
 }
 
-.ftp-compact .ftp-preview-item {
-    padding: calc(var(--ftp-preview-card-padding-vertical) * 0.67) calc(var(--ftp-preview-card-padding-horizontal) * 0.67);
-    border-bottom-width: calc(var(--ftp-preview-card-border-width) * 0.5);
+.ftpreview-compact .ftpreview-preview-item {
+    padding: calc(var(--ftpreview-preview-card-padding-vertical) * 0.67) calc(var(--ftpreview-preview-card-padding-horizontal) * 0.67);
+    border-bottom-width: calc(var(--ftpreview-preview-card-border-width) * 0.5);
 }
 
-.ftp-compact .ftp-preview-filename {
+.ftpreview-compact .ftpreview-preview-filename {
     margin-bottom: 1px;
 }
 
-.ftp-compact .ftp-preview-thumbnail {
+.ftpreview-compact .ftpreview-preview-thumbnail {
     margin-top: 1px;
 }
 
 /* Webkit scrollbar styling */
-.ftp-tree-column::-webkit-scrollbar,
-.ftp-preview-content::-webkit-scrollbar {
-    width: var(--ftp-scrollbar-width) !important;
+.ftpreview-tree-column::-webkit-scrollbar,
+.ftpreview-preview-content::-webkit-scrollbar {
+    width: var(--ftpreview-scrollbar-width) !important;
 }
 
-.ftp-tree-column::-webkit-scrollbar-track,
-.ftp-preview-content::-webkit-scrollbar-track {
+.ftpreview-tree-column::-webkit-scrollbar-track,
+.ftpreview-preview-content::-webkit-scrollbar-track {
     background: transparent !important;
 }
 
 /* Hide scrollbar by default */
-.ftp-tree-column::-webkit-scrollbar-thumb,
-.ftp-preview-content::-webkit-scrollbar-thumb {
+.ftpreview-tree-column::-webkit-scrollbar-thumb,
+.ftpreview-preview-content::-webkit-scrollbar-thumb {
     background: transparent !important;
     border-radius: 3px !important;
 }
 
 /* Show scrollbar on hover of parent */
-.ftp-tree-column:hover::-webkit-scrollbar-thumb,
-.ftp-preview-content:hover::-webkit-scrollbar-thumb {
-    background: var(--ftp-scrollbar-color) !important;
+.ftpreview-tree-column:hover::-webkit-scrollbar-thumb,
+.ftpreview-preview-content:hover::-webkit-scrollbar-thumb {
+    background: var(--ftpreview-scrollbar-color) !important;
 }
 
 /* Darker on direct scrollbar hover */
-.ftp-tree-column::-webkit-scrollbar-thumb:hover,
-.ftp-preview-content::-webkit-scrollbar-thumb:hover {
+.ftpreview-tree-column::-webkit-scrollbar-thumb:hover,
+.ftpreview-preview-content::-webkit-scrollbar-thumb:hover {
     background: var(--text-muted) !important;
 }
 
 /* Drag and drop styles */
-.ftp-preview-item.ftp-dragging,
-.ftp-folder-header.ftp-dragging {
+.ftpreview-preview-item.ftpreview-dragging,
+.ftpreview-folder-header.ftpreview-dragging {
     opacity: 0.5;
     cursor: move;
 }
 
-.ftp-folder-header.ftp-drop-target {
+.ftpreview-folder-header.ftpreview-drop-target {
     background-color: var(--interactive-accent);
     color: var(--text-on-accent);
     outline: 2px solid var(--interactive-accent);
     outline-offset: -2px;
 }
 
-.ftp-drag-ghost {
+.ftpreview-drag-ghost {
     /* Background color set dynamically with transparency */
     padding: 6px 14px;
     border-radius: 16px;
@@ -528,44 +535,44 @@
 }
 
 /* Modal input styling */
-.ftp-rename-input {
+.ftpreview-rename-input {
     width: 100%;
     margin-bottom: 10px;
 }
 
-.ftp-button-container {
+.ftpreview-button-container {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
     margin-top: 10px;
 }
 
-.ftp-delete-warning {
+.ftpreview-delete-warning {
     margin-bottom: 15px;
     color: var(--text-error);
     font-weight: 500;
 }
 
-.ftp-delete-detail {
+.ftpreview-delete-detail {
     color: var(--text-muted);
     font-size: 0.9em;
     margin-top: 8px;
 }
 
 /* Ko-fi container styling */
-.ftp-kofi-container {
+.ftpreview-kofi-container {
     margin-top: 40px;
     text-align: center;
     padding-top: 20px;
     border-top: 1px solid var(--background-modifier-border);
 }
 
-.ftp-kofi-text {
+.ftpreview-kofi-text {
     color: var(--text-muted);
     font-size: 14px;
 }
 
-.ftp-kofi-link {
+.ftpreview-kofi-link {
     color: #72a4f2;
     text-decoration: none;
     font-weight: 500;

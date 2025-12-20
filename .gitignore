@@ -16,7 +16,9 @@ Thumbs.db
 
 # Development
 data.json
-claude.md
+.hotreload
+deploy.sh
+CLAUDE.md
 
 # TypeScript
 *.tsbuildinfo

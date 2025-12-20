@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Pin to top functionality: Pin files to appear at the top of the preview panel
+  - Right-click any file and select "Pin to top" to pin it
+  - Pinned files show a 📌 indicator next to the filename
+  - Pinned files stay at the top regardless of sort order
+  - Uses shared localStorage for **cross-plugin compatibility** with File Tree Alternative plugin
+  - Files pinned in either plugin will appear pinned in both
+- External file drop support: Drag files from your OS into the plugin to import them
+  - Drop files onto the preview panel to import into the currently selected folder
+  - Drop files onto folder headers in the tree to import into specific folders
+  - Automatic naming conflict resolution (adds numbers if file already exists)
+  - Visual feedback with drop target highlighting
+  - Success notifications and auto-open for single file imports
+  - Works with all file types (images, PDFs, documents, etc.)
+- Touch gesture support for mobile devices
+  - Quick tap to select folders or open files
+  - Long hold (500ms) to show context menus
+  - Automatic menu cancellation when dragging
+  - Note: Drag-and-drop file movement not supported on mobile (platform limitation)
+
+### Improved
+- Preview panel refresh optimization: Only updates when preview text actually changes
+- Single card refresh: Updates individual cards instead of full panel to eliminate flicker
+
 ## [1.1.0] - 2024-11-17
 
 ### Added
