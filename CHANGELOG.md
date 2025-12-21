@@ -2,9 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.1.0] - 2024-12-21
 
 ### Added
+- Show root folder setting: Display the vault name as a root folder containing all other folders
+  - Root folder is open by default
+  - Clicking the root folder shows files at the vault root level
+  - Uses vault icon (or folders icon as fallback) in custom icon mode
+  - Slightly more prominent styling to distinguish from regular folders
+  - Toggle on/off via settings
 - Pin to top functionality: Pin files to appear at the top of the preview panel
   - Right-click any file and select "Pin to top" to pin it
   - Pinned files show a 📌 indicator next to the filename
@@ -27,16 +33,12 @@ All notable changes to this project will be documented in this file.
 ### Improved
 - Preview panel refresh optimization: Only updates when preview text actually changes
 - Single card refresh: Updates individual cards instead of full panel to eliminate flicker
+- Renamed CSS classes from `ftp-` to `ftpreview-` prefix for uniqueness
+- Updated default styling: smaller fonts, more rounded corners, refined spacing
+- Mobile launch behavior: Collapses sidebar and initializes from active file
 
-## [1.1.0] - 2024-11-17
-
-### Added
-- Show root folder setting: Display the vault name as a root folder containing all other folders
-  - Root folder is open by default
-  - Clicking the root folder shows files at the vault root level
-  - Uses vault icon (or folders icon as fallback) in custom icon mode
-  - Slightly more prominent styling to distinguish from regular folders
-  - Toggle on/off via settings
+### Fixed
+- Fixed mobile launch flicker by properly initializing active file when view opens
 
 ## [1.0.8] - 2024-11-15
 
