@@ -167,27 +167,28 @@ Advanced styling can be customized with CSS snippets. Available CSS variables:
 ```css
 :root {
     /* Font Sizes */
-    --ftpreview-folder-font-size: 14px;
-    --ftpreview-folder-icon-size: 14px;
-    --ftpreview-preview-filename-font-size: 14px;
-    --ftpreview-preview-text-font-size: 14px;
-    --ftpreview-header-font-size: 14px;
+    --ftpreview-folder-font-size: 13px;
+    --ftpreview-folder-icon-size: 15px;
+    --ftpreview-preview-filename-font-size: 13px;
+    --ftpreview-preview-text-font-size: 12px;
+    --ftpreview-header-font-size: 13px;
     --ftpreview-button-font-size: 16px;
     --ftpreview-placeholder-font-size: 12px;
 
     /* Spacing */
-    --ftpreview-preview-card-padding-vertical: 12px;
-    --ftpreview-preview-card-padding-horizontal: 12px;
+    --ftpreview-preview-card-padding-vertical: 10px;
+    --ftpreview-preview-card-padding-horizontal: 14px;
     --ftpreview-folder-indent: 20px;
     --ftpreview-folder-item-gap: 4px;
     --ftpreview-header-button-gap: 2px;
     --ftpreview-preview-card-border-width: 2px;
-    --ftpreview-preview-card-border-radius: 6px;
+    --ftpreview-preview-card-border-radius: 10px;
+    --ftpreview-folder-border-radius: 10px;
 
     /* Background Colors (unset = inherit from theme) */
     --ftpreview-tree-column-background: unset;
     --ftpreview-preview-column-background: unset;
-    --ftpreview-selected-folder-background: var(--background-modifier-border);
+    --ftpreview-selected-folder-background: rgba(128, 128, 128, 0.2);
 
     /* Text Colors (unset = inherit from theme) */
     --ftpreview-folder-text-color: unset;
