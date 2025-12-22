@@ -268,29 +268,32 @@ class FileTreePreviewView extends ItemView {
 					if (this.modifyDebounceTimer !== null) {
 						window.clearTimeout(this.modifyDebounceTimer);
 					}
-					this.modifyDebounceTimer = window.setTimeout(async () => {
+					this.modifyDebounceTimer = window.setTimeout(() => {
 						// Check if preview content actually changed before re-rendering
-						try {
-							const content = await this.app.vault.read(file);
-							const newPreviewText = this.extractPreviewText(content);
-							const cachedPreviewText = this.previewTextCache.get(file.path);
+						const updatePreview = async () => {
+							try {
+								const content = await this.app.vault.read(file);
+								const newPreviewText = this.extractPreviewText(content);
+								const cachedPreviewText = this.previewTextCache.get(file.path);
 
-							// Only re-render if preview text changed
-							if (newPreviewText !== cachedPreviewText) {
-								// Try to update just this one card
-								const singleCardSuccess = await this.updateSinglePreviewCard(file);
+								// Only re-render if preview text changed
+								if (newPreviewText !== cachedPreviewText) {
+									// Try to update just this one card
+									const singleCardSuccess = await this.updateSinglePreviewCard(file);
 
-								// If single card update failed, fall back to full render
-								if (!singleCardSuccess) {
-									await this.renderPreview();
+									// If single card update failed, fall back to full render
+									if (!singleCardSuccess) {
+										await this.renderPreview();
+									}
 								}
+							} catch (error) {
+								console.error("Error checking preview content:", error);
+								// On error, just re-render to be safe
+								await this.renderPreview();
 							}
-						} catch (error) {
-							console.error("Error checking preview content:", error);
-							// On error, just re-render to be safe
-							await this.renderPreview();
-						}
-						this.modifyDebounceTimer = null;
+							this.modifyDebounceTimer = null;
+						};
+						updatePreview().catch(console.error);
 					}, 1500); // 1.5 second delay after last keystroke
 				}
 			})
@@ -320,12 +323,13 @@ class FileTreePreviewView extends ItemView {
 		this.startIconizeDataPolling();
 	}
 
-	async onClose() {
+	onClose(): Promise<void> {
 		// Clean up debounce timer
 		if (this.modifyDebounceTimer !== null) {
 			window.clearTimeout(this.modifyDebounceTimer);
 			this.modifyDebounceTimer = null;
 		}
+		return Promise.resolve();
 	}
 
 	private async waitForIconizePlugin() {
@@ -626,7 +630,7 @@ class FileTreePreviewView extends ItemView {
 
 		// 1. Load from localStorage (shared with File Tree Alternative plugin)
 		try {
-			const stored = localStorage.getItem(PINNED_FILES_KEY);
+			const stored = this.app.loadLocalStorage(PINNED_FILES_KEY);
 			if (stored) {
 				const paths = JSON.parse(stored) as string[];
 				paths.forEach(path => allPins.add(path));
@@ -653,7 +657,7 @@ class FileTreePreviewView extends ItemView {
 
 		// 1. Save to localStorage (shared with File Tree Alternative plugin)
 		try {
-			localStorage.setItem(PINNED_FILES_KEY, JSON.stringify(paths));
+			this.app.saveLocalStorage(PINNED_FILES_KEY, JSON.stringify(paths));
 		} catch (error) {
 			console.error("Failed to save pinned files to localStorage:", error);
 		}
@@ -770,9 +774,9 @@ class FileTreePreviewView extends ItemView {
 		}
 
 		// Click handler to show root-level files
-		folderHeader.addEventListener("click", async () => {
+		folderHeader.addEventListener("click", () => {
 			this.selectedFolder = root;
-			await Promise.all([
+			Promise.all([
 				this.renderFileTree(),
 				this.renderPreview()
 			]).catch(console.error);
@@ -1129,7 +1133,7 @@ class FileTreePreviewView extends ItemView {
 					this.buildFolderContextMenu(menu, item);
 
 					// Show menu at touch position
-					const touch = (e as TouchEvent).touches[0];
+					const touch = e.touches[0];
 					if (touch) {
 						menu.showAtPosition({ x: touch.clientX, y: touch.clientY });
 					}
@@ -2036,7 +2040,7 @@ class FileTreePreviewView extends ItemView {
 		let touchTimer: number | null = null;
 		let cardMenuShown = false;
 
-		previewItem.addEventListener("touchstart", (e) => {
+		previewItem.addEventListener("touchstart", (e: TouchEvent) => {
 			touchStartTime = Date.now();
 			cardMenuShown = false;
 
@@ -2050,7 +2054,7 @@ class FileTreePreviewView extends ItemView {
 				this.buildFileContextMenu(menu, file);
 
 				// Show menu at touch location
-				const touch = (e as TouchEvent).touches[0];
+				const touch = e.touches[0];
 				if (touch) {
 					menu.showAtPosition({ x: touch.clientX, y: touch.clientY });
 				}

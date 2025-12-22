@@ -1,13 +1,13 @@
 /* CSS Variables */
 :root {
-    /* Font Sizes */
-    --ftpreview-folder-font-size: 13px;
+    /* Font Sizes - using Obsidian theme variables with fallbacks */
+    --ftpreview-folder-font-size: var(--font-ui-small, 13px);
     --ftpreview-folder-icon-size: 15px;
-    --ftpreview-preview-filename-font-size: 13px;
-    --ftpreview-preview-text-font-size: 12px;
-    --ftpreview-header-font-size: 13px;
-    --ftpreview-button-font-size: 16px;
-    --ftpreview-placeholder-font-size: 12px;
+    --ftpreview-preview-filename-font-size: var(--font-ui-small, 13px);
+    --ftpreview-preview-text-font-size: calc(var(--font-ui-small, 14px) - 2px);
+    --ftpreview-header-font-size: var(--font-ui-small, 13px);
+    --ftpreview-button-font-size: var(--font-ui-medium, 16px);
+    --ftpreview-placeholder-font-size: var(--font-ui-smaller, 12px);
 
     /* Spacing */
     --ftpreview-preview-card-padding-vertical: 10px;

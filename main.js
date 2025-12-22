@@ -194,22 +194,25 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
           if (this.modifyDebounceTimer !== null) {
             window.clearTimeout(this.modifyDebounceTimer);
           }
-          this.modifyDebounceTimer = window.setTimeout(async () => {
-            try {
-              const content = await this.app.vault.read(file);
-              const newPreviewText = this.extractPreviewText(content);
-              const cachedPreviewText = this.previewTextCache.get(file.path);
-              if (newPreviewText !== cachedPreviewText) {
-                const singleCardSuccess = await this.updateSinglePreviewCard(file);
-                if (!singleCardSuccess) {
-                  await this.renderPreview();
+          this.modifyDebounceTimer = window.setTimeout(() => {
+            const updatePreview = async () => {
+              try {
+                const content = await this.app.vault.read(file);
+                const newPreviewText = this.extractPreviewText(content);
+                const cachedPreviewText = this.previewTextCache.get(file.path);
+                if (newPreviewText !== cachedPreviewText) {
+                  const singleCardSuccess = await this.updateSinglePreviewCard(file);
+                  if (!singleCardSuccess) {
+                    await this.renderPreview();
+                  }
                 }
+              } catch (error) {
+                console.error("Error checking preview content:", error);
+                await this.renderPreview();
               }
-            } catch (error) {
-              console.error("Error checking preview content:", error);
-              await this.renderPreview();
-            }
-            this.modifyDebounceTimer = null;
+              this.modifyDebounceTimer = null;
+            };
+            updatePreview().catch(console.error);
           }, 1500);
         }
       })
@@ -233,11 +236,12 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
     );
     this.startIconizeDataPolling();
   }
-  async onClose() {
+  onClose() {
     if (this.modifyDebounceTimer !== null) {
       window.clearTimeout(this.modifyDebounceTimer);
       this.modifyDebounceTimer = null;
     }
+    return Promise.resolve();
   }
   async waitForIconizePlugin() {
     var _a, _b;
@@ -462,7 +466,7 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
   loadPinnedFiles() {
     const allPins = /* @__PURE__ */ new Set();
     try {
-      const stored = localStorage.getItem(PINNED_FILES_KEY);
+      const stored = this.app.loadLocalStorage(PINNED_FILES_KEY);
       if (stored) {
         const paths = JSON.parse(stored);
         paths.forEach((path) => allPins.add(path));
@@ -482,7 +486,7 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
   savePinnedFiles() {
     const paths = Array.from(this.pinnedFiles);
     try {
-      localStorage.setItem(PINNED_FILES_KEY, JSON.stringify(paths));
+      this.app.saveLocalStorage(PINNED_FILES_KEY, JSON.stringify(paths));
     } catch (error) {
       console.error("Failed to save pinned files to localStorage:", error);
     }
@@ -575,9 +579,9 @@ var FileTreePreviewView = class extends import_obsidian.ItemView {
     } else if (iconStyle === "folder") {
       folderNameSpan.setText("\u{1F4C1} " + this.app.vault.getName());
     }
-    folderHeader.addEventListener("click", async () => {
+    folderHeader.addEventListener("click", () => {
       this.selectedFolder = root;
-      await Promise.all([
+      Promise.all([
         this.renderFileTree(),
         this.renderPreview()
       ]).catch(console.error);
